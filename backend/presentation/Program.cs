@@ -1,7 +1,7 @@
 
 using infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using  Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
@@ -15,15 +15,28 @@ using Microsoft.AspNetCore.Identity;
 
 
 /*
-1-planning how the connection will be 
-2- design entities
-3- design entities relationship 
-4- design entities data 
-5- implementing entities table
-6- implementing with EF 
-7-trying connection without realtime
-8-adding real time 
+--project infrastructure/infrastructure.csproj --startup-project presentation/presentation.csproj
+
+
+/*
+edit design chat controller 
+design Friends entity
 */
+
+/*
+understanding Linq queries and use better for perfomance
+-tracking , no tracking 
+-loading data when calling 
+-different collection and when to use every one 
+*/
+
+/*
+redis
+index
+stored procedural
+*/
+
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,9 +51,9 @@ builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 
 builder.Services.AddScoped<IAuthMangaer, AuthManager>();
- builder.Services.AddTransient<ISmsSender,AuthMessageSender>();
-  builder.Services.AddTransient<IEmailSender,AuthMessageSender>();
-    builder.Services.Configure<SMSoptions>(builder.Configuration); 
+builder.Services.AddTransient<ISmsSender, AuthMessageSender>();
+builder.Services.AddTransient<IEmailSender, AuthMessageSender>();
+builder.Services.Configure<SMSoptions>(builder.Configuration);
 
 
 builder.Services.AddCors(options =>
@@ -52,48 +65,48 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(
         options => options.UseSqlServer("name=ConnectionStrings:DefaultConnection"));
 
-builder.Services.AddIdentity<ApiUser,IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentity<ApiUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddTokenProvider<DataProtectorTokenProvider<ApiUser>>("Test")
-    .AddDefaultTokenProviders(); 
+    .AddDefaultTokenProviders();
 
-    builder.Services.Configure<IdentityOptions>(options =>
+builder.Services.Configure<IdentityOptions>(options =>
 {
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 6;
-    options.Password.RequiredUniqueChars = 1;
-  
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
+options.Password.RequireDigit = true;
+options.Password.RequireLowercase = true;
+options.Password.RequireNonAlphanumeric = true;
+options.Password.RequireUppercase = true;
+options.Password.RequiredLength = 6;
+options.Password.RequiredUniqueChars = 1;
 
-    options.User.AllowedUserNameCharacters =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-    options.User.RequireUniqueEmail = false;
+options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+options.Lockout.MaxFailedAccessAttempts = 5;
+options.Lockout.AllowedForNewUsers = true;
+
+options.User.AllowedUserNameCharacters =
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+options.User.RequireUniqueEmail = false;
 });
-  
+
 builder.Services.AddAuthentication(options =>
     {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(o =>
-{
-    o.TokenValidationParameters = new TokenValidationParameters
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    }).AddJwtBearer(o =>
     {
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-      IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwtSettings:Key"] ?? string.Empty)),
-        
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = false,
-        ValidateIssuerSigningKey = true
-    };
-});
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwtSettings:Key"] ?? string.Empty)),
+
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = false,
+            ValidateIssuerSigningKey = true
+        };
+    });
 
 builder.Services.AddAuthorization();
 
@@ -104,11 +117,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-      app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        c.RoutePrefix = string.Empty; 
-    });
+    app.UseSwaggerUI(c =>
+  {
+      c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+      c.RoutePrefix = string.Empty;
+  });
 }
 
 app.UseCors("AllowAll");

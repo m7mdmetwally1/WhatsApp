@@ -1,13 +1,13 @@
 {
   "Version": 1,
-  "Hash": "sfxi0DRRpnJjmDr3ARYHGt6OsRmeX+RO00mqwYz53cA=",
+  "Hash": "sl4X5OTSe4SMHXF8JbCrwVnARFOofbxwwFwbWj4hM2E=",
   "Source": "presentation",
   "BasePath": "_content/presentation",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [
     {
-      "Identity": "E:\\projects\\whatsapp\\Domain\\Domain.csproj",
+      "Identity": "E:\\projects\\whatsapp\\backend\\Domain\\Domain.csproj",
       "Version": 2,
       "Source": "Domain",
       "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",
@@ -18,7 +18,7 @@
       "AdditionalBuildPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained"
     },
     {
-      "Identity": "E:\\projects\\whatsapp\\infrastructure\\infrastructure.csproj",
+      "Identity": "E:\\projects\\whatsapp\\backend\\infrastructure\\infrastructure.csproj",
       "Version": 2,
       "Source": "infrastructure",
       "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",

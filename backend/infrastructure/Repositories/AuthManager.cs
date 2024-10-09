@@ -13,26 +13,30 @@ using System.Text;
 using infrastructure.Repositories.SmsService;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Domain.Entities.chatEntities;
+using infrastructure.Data;
 
 
 namespace infrastructure.Repositories;
 
 public class AuthManager : IAuthMangaer
 {
-
+    private readonly IConfiguration _configuration;
     private readonly UserManager<ApiUser> _userManager;
     private readonly IMapper _mapper;
-    private readonly IEmailService _emailService;
+  
     private readonly SignInManager<ApiUser> _signInManager;
     private readonly IEmailSender _emailSender;
     private readonly ISmsSender _smsSender;
     private readonly ILogger<AuthManager> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly ApplicationDbContext _context;
+  
     private ApiUser _user;
 
 
-    public AuthManager(IConfiguration configuration,UserManager<ApiUser> userManager,IMapper mapper,SignInManager<ApiUser> signInManager,IEmailSender emailSender,ISmsSender smsSender,ILogger<AuthManager> logger )
+    public AuthManager(IConfiguration configuration,UserManager<ApiUser> userManager,IMapper mapper,SignInManager<ApiUser> signInManager,IEmailSender emailSender,ISmsSender smsSender,ILogger<AuthManager> logger,ApplicationDbContext context )
     {
+        this._configuration = configuration;
         this._userManager = userManager;
         this._mapper = mapper;
     
@@ -40,6 +44,7 @@ public class AuthManager : IAuthMangaer
         this._emailSender = emailSender;
         this._smsSender = smsSender;
         this._logger = logger;
+        this._context = context;
     }
 
 
@@ -54,7 +59,7 @@ public class AuthManager : IAuthMangaer
          _user = _mapper.Map<ApiUser>(userDto);
         _user.UserName = userDto.PhoneNumber;
 
-
+        
         
 
         var result = await _userManager.CreateAsync(_user,userDto.Password);
@@ -68,12 +73,21 @@ public class AuthManager : IAuthMangaer
 
              
 
-              await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
+              // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
 
+              var chatUser = new User
+    {      
+        Id = _user.Id,
+        FirstName=_user.FirstName,
+        LastName=_user.LastName
+    };
+  
+          _context.User.Add(chatUser);
+        await _context.SaveChangesAsync();
               
          }
 
-        
+
 
          return result.Errors;
 
@@ -125,51 +139,60 @@ public class AuthManager : IAuthMangaer
       
          var user = await _userManager.FindByNameAsync(login.PhoneNumber);
 
+        
+      _logger.LogInformation($"{user.UserName}");
+
         if (user == null) {
       return null;
     }
 
-      var result = await _signInManager.PasswordSignInAsync(user.UserName, login.Password, false, true);
+       bool isValidUser = await _userManager.CheckPasswordAsync(user, login.Password);
 
-       if(!result.Succeeded) {
-           return null;
-        }
 
-        var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
 
-       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(_user);
+       if(isValidUser) {
+        
+            var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
 
+       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
+
+          // var token = await GenerateJWTToken(user);
           var token = await GenerateJWTToken();
 
            return new AuthResponseDto
             {
                 Token = token,
-                UserId = _user.Id,
+                UserId = user.Id,
                 RefreshToken="",
-                PhoneNumber=_user.PhoneNumber,
+                PhoneNumber=user.PhoneNumber,
              IsTwoFactorEnabled=isTwoFactorEnabled,
              IsEmailConfirmed=isEmailConfirmed
             };
+        }
+
+        return null;
+
+      
 
     } 
 
-    public async Task<string> GenerateJWTToken() {
-    var claims = new List<Claim> {
-        new Claim(ClaimTypes.NameIdentifier, _user.Id.ToString()),
-        new Claim(ClaimTypes.Name, _user.FirstName),
-    };
-    var jwtToken = new JwtSecurityToken(
-        claims: claims,
-        notBefore: DateTime.UtcNow,
-        expires: DateTime.UtcNow.AddDays(30),
-        signingCredentials: new SigningCredentials(
-            new SymmetricSecurityKey(
-               Encoding.UTF8.GetBytes(_configuration["ApplicationSettings:JWT_Secret"])
-                ),
-            SecurityAlgorithms.HmacSha256Signature)
-        );
-    return new JwtSecurityTokenHandler().WriteToken(jwtToken);
-}
+         private async  Task<string> GenerateJWTToken()
+        {
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["jwtSettings:Key"]));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
+              _configuration["jwtSettings:Issuer"],
+              null,
+              expires: DateTime.Now.AddMinutes(120),
+              signingCredentials: credentials);
+              var token =  new JwtSecurityTokenHandler().WriteToken(Sectoken);
+
+                 return token;
+
+        }
+
+        
 
 
 

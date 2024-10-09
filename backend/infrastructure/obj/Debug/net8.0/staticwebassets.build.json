@@ -1,13 +1,13 @@
 {
   "Version": 1,
-  "Hash": "DP2/VfWMrOjQgjDhV0DsAKhfyOKUb4sRSfyYXoVcKng=",
+  "Hash": "3e5UXh3gSu9bRqNH//OB16m3Ygiv0dEFQFY+gm2hUwQ=",
   "Source": "infrastructure",
   "BasePath": "_content/infrastructure",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [
     {
-      "Identity": "E:\\projects\\whatsapp\\Domain\\Domain.csproj",
+      "Identity": "E:\\projects\\whatsapp\\backend\\Domain\\Domain.csproj",
       "Version": 2,
       "Source": "Domain",
       "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",

@@ -95,6 +95,124 @@ namespace infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.chatEntities.Chat", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsGroupChat")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Chat");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.ChatUser", b =>
+                {
+                    b.Property<string>("ChatId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CustomName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ChatId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatUser");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.Messages", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ChatId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("SeenTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.SeenBy", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("MessagesId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("SeenTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SeenWith")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessagesId");
+
+                    b.ToTable("SeenBy");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.User", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NickName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("User");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -124,13 +242,13 @@ namespace infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "1297a1db-cb88-415b-a473-d13f9b8ed6cb",
+                            Id = "13334fc5-a37e-498f-9a78-5d04aca1d4c6",
                             Name = "Adminstrator",
                             NormalizedName = "ADMINSTRATOR"
                         },
                         new
                         {
-                            Id = "39dcae01-fb2d-45b2-975c-914e2f0853a5",
+                            Id = "3fcf7cf3-352b-4035-a43e-c448a4c67664",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -242,6 +360,53 @@ namespace infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.chatEntities.ChatUser", b =>
+                {
+                    b.HasOne("Domain.Entities.chatEntities.Chat", "Chat")
+                        .WithMany("ChatUser")
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.chatEntities.User", "User")
+                        .WithMany("ChatUser")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.Messages", b =>
+                {
+                    b.HasOne("Domain.Entities.chatEntities.Chat", "Chat")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.chatEntities.User", "User")
+                        .WithMany("Messages")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.SeenBy", b =>
+                {
+                    b.HasOne("Domain.Entities.chatEntities.Messages", "Messages")
+                        .WithMany("SeenBy")
+                        .HasForeignKey("MessagesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -291,6 +456,25 @@ namespace infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.Chat", b =>
+                {
+                    b.Navigation("ChatUser");
+
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.Messages", b =>
+                {
+                    b.Navigation("SeenBy");
+                });
+
+            modelBuilder.Entity("Domain.Entities.chatEntities.User", b =>
+                {
+                    b.Navigation("ChatUser");
+
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }
