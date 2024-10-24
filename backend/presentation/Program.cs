@@ -16,27 +16,25 @@ using Microsoft.AspNetCore.Identity;
 
 /*
 --project infrastructure/infrastructure.csproj --startup-project presentation/presentation.csproj
+/* 
 
-
-/*
-edit design chat controller 
-design Friends entity
+implement Message Controller
+signalir 
+frontend
+deploy
 */
-
 /*
-understanding Linq queries and use better for perfomance
--tracking , no tracking 
--loading data when calling 
--different collection and when to use every one 
+using test 
+add caller
+add story 
+use redis
+use .net caching methods
+use database performance methods INDEX , PRODEDURAL
 */
-
 /*
-redis
-index
-stored procedural
+move friend and upload methods to separate file
+check them in chat and authentication controller
 */
-
-
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,11 +48,13 @@ builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 
 
+
 builder.Services.AddScoped<IAuthMangaer, AuthManager>();
+builder.Services.AddScoped<IChatManager, ChatManager>();
 builder.Services.AddTransient<ISmsSender, AuthMessageSender>();
 builder.Services.AddTransient<IEmailSender, AuthMessageSender>();
 builder.Services.Configure<SMSoptions>(builder.Configuration);
-
+builder.Services.AddScoped<IImageKitService, ImageKitService>();
 
 builder.Services.AddCors(options =>
 {
@@ -107,6 +107,7 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true
         };
     });
+
 
 builder.Services.AddAuthorization();
 

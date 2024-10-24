@@ -12,8 +12,10 @@ public class MapperConfig: Profile
     {
 
           CreateMap<ApiUserDto, ApiUser>().ReverseMap();
-          CreateMap<ChatDto, Chat>().ReverseMap();
-          CreateMap<MessageDto,Messages>().ReverseMap();
+          CreateMap<CreateIndividualChatDto,IndividualChat>().ReverseMap();
+          CreateMap<CreateGroupChatDto,GroupChat>().ReverseMap();
+        //   CreateMap<ChatDto, Chat>().ReverseMap();
+        //   CreateMap<MessageDto,Messages>().ReverseMap();
         
     }
 }

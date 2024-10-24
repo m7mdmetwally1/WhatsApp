@@ -15,226 +15,204 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Domain.Entities.chatEntities;
 using infrastructure.Data;
+using System.Formats.Asn1;
+using Microsoft.EntityFrameworkCore;
+using Application.ChatsDto;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 
 
 namespace infrastructure.Repositories;
 
 public class AuthManager : IAuthMangaer
 {
-    private readonly IConfiguration _configuration;
-    private readonly UserManager<ApiUser> _userManager;
-    private readonly IMapper _mapper;
-  
-    private readonly SignInManager<ApiUser> _signInManager;
-    private readonly IEmailSender _emailSender;
-    private readonly ISmsSender _smsSender;
-    private readonly ILogger<AuthManager> _logger;
-    private readonly ApplicationDbContext _context;
-  
-    private ApiUser _user;
+  private readonly IImageKitService _imageKitService;
+  private readonly IConfiguration _configuration;
+  private readonly UserManager<ApiUser> _userManager;
+  private readonly IMapper _mapper;
+
+  private readonly SignInManager<ApiUser> _signInManager;
+  private readonly IEmailSender _emailSender;
+  private readonly ISmsSender _smsSender;
+  private readonly ILogger<AuthManager> _logger;
+  private readonly ApplicationDbContext _context;
+
+  private ApiUser _user;
 
 
-    public AuthManager(IConfiguration configuration,UserManager<ApiUser> userManager,IMapper mapper,SignInManager<ApiUser> signInManager,IEmailSender emailSender,ISmsSender smsSender,ILogger<AuthManager> logger,ApplicationDbContext context )
-    {
-        this._configuration = configuration;
-        this._userManager = userManager;
-        this._mapper = mapper;
-    
-        this._signInManager = signInManager;
-        this._emailSender = emailSender;
-        this._smsSender = smsSender;
-        this._logger = logger;
-        this._context = context;
-    }
+  public AuthManager(IImageKitService imageKitService,IConfiguration configuration,UserManager<ApiUser> userManager,IMapper mapper,SignInManager<ApiUser> signInManager,IEmailSender emailSender,ISmsSender smsSender,ILogger<AuthManager> logger,ApplicationDbContext context )
+  {
+    this._imageKitService = imageKitService;
+    this._configuration = configuration;
+    this._userManager = userManager;
+    this._mapper = mapper;
+
+    this._signInManager = signInManager;
+    this._emailSender = emailSender;
+    this._smsSender = smsSender;
+    this._logger = logger;
+    this._context = context;
+  }
 
 
-    public async Task<IEnumerable<IdentityError>> Register(ApiUserDto userDto){
+  public async Task<IEnumerable<IdentityError>> Register(ApiUserDto userDto)
+  {
 
-      if (userDto == null)
+    if (userDto == null)
     {
         return new List<IdentityError> { new IdentityError { Description = "User data is required." } };
     }
 
-        
-         _user = _mapper.Map<ApiUser>(userDto);
-        _user.UserName = userDto.PhoneNumber;
+    _user = _mapper.Map<ApiUser>(userDto);
+    _user.UserName = userDto.PhoneNumber;
 
-        
-        
+    var result = await _userManager.CreateAsync(_user,userDto.Password);
 
-        var result = await _userManager.CreateAsync(_user,userDto.Password);
+    if(result.Succeeded){
+        var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
 
-        
+        // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
 
-         if(result.Succeeded){
-           
-
-          var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
-
-             
-
-              // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
-
-              var chatUser = new User
-    {      
-        Id = _user.Id,
-        FirstName=_user.FirstName,
-        LastName=_user.LastName
-    };
-  
-          _context.User.Add(chatUser);
-        await _context.SaveChangesAsync();
-              
-         }
-
-
-
-         return result.Errors;
-
+        var chatUser = new User
+        {      
+            Id = _user.Id,
+            FirstName=_user.FirstName,
+            LastName=_user.LastName
+        };
+          
+        _context.User.Add(chatUser);
+        await _context.SaveChangesAsync();              
     }
 
+    return result.Errors;
+  }
+
     
-      public async Task<IEnumerable<IdentityError>> ConfirmEmail(string userId, string token)
-        {
-           var  user = await _userManager.FindByIdAsync(userId);
-
-
-           
-          
-            _logger.LogInformation($"{token} token recieved");
+  public async Task<IEnumerable<IdentityError>> ConfirmEmail(string userId, string token)
+  {
+    var  user = await _userManager.FindByIdAsync(userId);
+     
+    _logger.LogInformation($"{token} token recieved");
              
-
-            if(user == null){
-              return null;
-            }
+    if(user == null){
+      return null;
+    }
                 
-                token = token.Replace(" ", "+");
+    token = token.Replace(" ", "+");
 
-
-                var result = await _userManager.ConfirmEmailAsync(user, token);
+    var result = await _userManager.ConfirmEmailAsync(user, token);
              
-        _logger.LogInformation($"{result} result of query");
+    _logger.LogInformation($"{result} result of query");
 
-             if(!result.Succeeded){
-
-
-
-                return result.Errors;
-             }
+    if(!result.Succeeded){
 
 
-              _logger.LogInformation($"Email confirmed successfully for user with ID {userId}");
 
-             return   result.Errors;
+      return result.Errors;
+    }
+
+
+    _logger.LogInformation($"Email confirmed successfully for user with ID {userId}");
+
+    return   result.Errors;
             
-        }
+  }
 
 
-    public async Task<AuthResponseDto> Login(LoginDto login){
+  public async Task<AuthResponseDto> Login(LoginDto login)
+  {
 
-
-      if(login == null ){
-        return null;
-      }
+    if(login == null ){
+      return null;
+    }
       
-         var user = await _userManager.FindByNameAsync(login.PhoneNumber);
+    var user = await _userManager.FindByNameAsync(login.PhoneNumber);
 
         
-      _logger.LogInformation($"{user.UserName}");
+    _logger.LogInformation($"{user.UserName}");
 
-        if (user == null) {
+    if (user == null)
+    {
       return null;
     }
 
-       bool isValidUser = await _userManager.CheckPasswordAsync(user, login.Password);
+    bool isValidUser = await _userManager.CheckPasswordAsync(user, login.Password);
 
 
 
-       if(isValidUser) {
+    if(isValidUser)
+    {
         
-            var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+      var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
 
-       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
+      var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
 
-          // var token = await GenerateJWTToken(user);
-          var token = await GenerateJWTToken();
+      // var token = await GenerateJWTToken(user);
+      var token = await GenerateJWTToken();
 
-           return new AuthResponseDto
-            {
-                Token = token,
-                UserId = user.Id,
-                RefreshToken="",
-                PhoneNumber=user.PhoneNumber,
-             IsTwoFactorEnabled=isTwoFactorEnabled,
-             IsEmailConfirmed=isEmailConfirmed
-            };
-        }
+      return new AuthResponseDto
+      {
+          Token = token,
+          UserId = user.Id,
+          RefreshToken="",
+          PhoneNumber=user.PhoneNumber,
+        IsTwoFactorEnabled=isTwoFactorEnabled,
+        IsEmailConfirmed=isEmailConfirmed
+      };
+    }
 
-        return null;
+    return null;
 
-      
+  } 
 
-    } 
-
-         private async  Task<string> GenerateJWTToken()
-        {
+  private async  Task<string> GenerateJWTToken()
+  {
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["jwtSettings:Key"]));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
-              _configuration["jwtSettings:Issuer"],
-              null,
-              expires: DateTime.Now.AddMinutes(120),
-              signingCredentials: credentials);
-              var token =  new JwtSecurityTokenHandler().WriteToken(Sectoken);
+    var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
+                                        _configuration["jwtSettings:Issuer"],
+                                        null,
+                                        expires: DateTime.Now.AddMinutes(120),
+                                        signingCredentials: credentials);
+                                        var token =  new JwtSecurityTokenHandler().WriteToken(Sectoken);
 
-                 return token;
+    return token;
 
-        }
+  }
 
-        
+  public async Task<bool> VerifyPhoneNumberCode(string phoneNumber, string code)
+  {
 
-
-
- public async Task<bool> VerifyPhoneNumberCode(string phoneNumber, string code)
-{
-
-  var user = await _userManager.FindByNameAsync(phoneNumber);
+    var user = await _userManager.FindByNameAsync(phoneNumber);
 
     if (user == null)
     {
         return false;
     }
 
-      var isValidCode = await _userManager.VerifyChangePhoneNumberTokenAsync(user, code, user.PhoneNumber);
+    var isValidCode = await _userManager.VerifyChangePhoneNumberTokenAsync(user, code, user.PhoneNumber);
 
-      
-
-  if (isValidCode)
-{
-    user.PhoneNumberConfirmed = true;  
-    var result = await _userManager.UpdateAsync(user);  
-
-    if (result.Succeeded)
+    if (isValidCode)
     {
-        return true;
-    }
-}
+      user.PhoneNumberConfirmed = true;  
+      var result = await _userManager.UpdateAsync(user);  
+
+      if (result.Succeeded)
+      {
+          return true;
+      }
+    } 
     return false;
 
-}
+  }
 
+  public async Task<bool> ResendSms(string  phoneNumber)
+  {
 
- public async Task<bool> ResendSms(string  phoneNumber)
-{
-
-  var _user = await _userManager.FindByNameAsync(phoneNumber);
-
-   
+    var _user = await _userManager.FindByNameAsync(phoneNumber);
 
     var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user,phoneNumber);
-
-
 
     try{
       await _smsSender.SendSmsAsync($"{phoneNumber}",$"your new  verification code is {code}"); 
@@ -244,60 +222,48 @@ public class AuthManager : IAuthMangaer
       return false;
     }
 
+  }
 
-}
+  public async Task<bool> CheckTwoFactor(CheckTwoFactorDto checkTwoFactorDto)
+  {
 
+    var _user = await _userManager.FindByNameAsync(checkTwoFactorDto.PhoneNumber);
 
- public async Task<bool> CheckTwoFactor(CheckTwoFactorDto checkTwoFactorDto)
-{
+    var enabled = await _userManager.GetTwoFactorEnabledAsync(_user);
 
-  var _user = await _userManager.FindByNameAsync(checkTwoFactorDto.PhoneNumber);
-
-    
-   var enabled = await _userManager.GetTwoFactorEnabledAsync(_user);
-
-    if(enabled){
+    if(enabled)
+    {
       return true;
     }
 
-await _userManager.SetTwoFactorEnabledAsync(_user, true);
+    await _userManager.SetTwoFactorEnabledAsync(_user, true);
 
-  
-return false;
-   
-
-
-}
-
-
-
- public async Task<bool> VerifyEmail(string email,string phoneNumber )
-{
-
-  var _user = await _userManager.FindByNameAsync(phoneNumber);
-
-   var isConfirmed =  await _userManager.IsEmailConfirmedAsync(_user);
-
-  if(isConfirmed  || _user == null ){
-    return  false;
+    return false;
   }
 
-   var token = await _userManager.GenerateEmailConfirmationTokenAsync(_user);
+  public async Task<bool> VerifyEmail(string email,string phoneNumber )
+  {
 
-   var confirmationLink = $"http://localhost:5233/api/Authentication/confirm-email?userId={_user.Id}&token={token}";
+    var _user = await _userManager.FindByNameAsync(phoneNumber);
 
-  
-    await _emailSender.SendEmailAsync(email, "Confirm your email", $"Please confirm your email by <a href='{confirmationLink}'>clicking here</a>;.");
+    var isConfirmed =  await _userManager.IsEmailConfirmedAsync(_user);
 
-return true;
+    if(isConfirmed  || _user == null ){
+      return  false;
+    }
 
-}
+    var token = await _userManager.GenerateEmailConfirmationTokenAsync(_user);
 
+    var confirmationLink = $"http://localhost:5233/api/Authentication/confirm-email?userId={_user.Id}&token={token}";
 
+    
+      await _emailSender.SendEmailAsync(email, "Confirm your email", $"Please confirm your email by <a href='{confirmationLink}'>clicking here</a>;.");
+
+    return true;
+
+  }
 
 public async Task<bool> SendTwoFactorCode(string phoneNumber){
-
-  
 
   var _user = await _userManager.FindByNameAsync(phoneNumber);
 
@@ -307,21 +273,77 @@ public async Task<bool> SendTwoFactorCode(string phoneNumber){
 
   var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, phoneNumber);
 
-try{
- await _smsSender.SendSmsAsync($"{phoneNumber}",$"your verification code is {code}"); 
- return true;
+  try{
+  await _smsSender.SendSmsAsync($"{phoneNumber}",$"your verification code is {code}"); 
+  return true;
 
-}catch(Exception ex){
+  }catch(Exception ex){
 
-  return false;
+    return false;
 
-}
-
-
+  }
 
 }
 
+  public async Task<ImageKitResponse> UploadImage(IFormFile imageUrl)
+  {
+    if(imageUrl == null){
+      return null;
+    }
+      var imageKitResponse =  await _imageKitService.UploadImage(imageUrl);
+      if(imageKitResponse == null){
+        return null;
+      }
+      return imageKitResponse;
+  }
+
+  public async Task<bool> DeleteUserImageKitImage(string imageId,string userId){
+    
+    var user = await _context.User.Where(u=>u.Id == userId).FirstOrDefaultAsync(); 
+    if(user == null){
+    return false;
+    }
+
+    user.ImageUrl = "";     
+    var result = await _context.SaveChangesAsync();
+    if(result > 0){
+      return false;
+    }
+
+    var deleteResult = await _imageKitService.DeleteImage(imageId);
+    if(!deleteResult){
+      return false;
+    }
+
+    return true;
+  }
+
+  public async Task<bool> AddFriend(CreateIndividualChatDto chatDto)
+  {
+    
+    var user =await _context.User.Include(u=>u.Friends).Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
+    var friend =await _context.User.Where(u => u.Id == chatDto.SecondUserId).FirstOrDefaultAsync();
+    if(user == null || friend == null){
+      return false;
+    }
+
+    var isFriendAlready = user.Friends.Any(f => f.Id == friend.Id);
+
+    if (isFriendAlready)
+    {
+        return true;
+    }
+  
+    user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??""});
+
+    var result =await  _context.SaveChangesAsync();
+
+    return result > 0;
+  }
+
+ 
 }
+
 
 
 

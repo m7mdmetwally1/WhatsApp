@@ -10,14 +10,15 @@ namespace infrastructure.Data;
 public class ApplicationDbContext : IdentityDbContext<ApiUser>
 {
 
-   public DbSet<Chat> Chat { get; set; }
- 
-   public DbSet<ChatUser> ChatUser { get; set; }
-   public DbSet<Messages> Messages { get; set; }
- 
+   public DbSet<GroupChat> Chat { get; set; }
+   public DbSet<IndividualChat> IndividualChat { get; set; }
+   public DbSet<GroupChatUser> GroupChatUser { get; set; }
+   public DbSet<IndividualChatUser> IndividualChatUser { get; set; }
+   public DbSet<GroupMessage> GroupMessages { get; set; }
+   public DbSet<IndividualMessage> IndividualMessages { get; set; }
    public DbSet<User> User { get; set; }
-
    public DbSet<SeenBy> SeenBy { get; set; }
+   public DbSet<Friend> Friends {get;set;}
 
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -27,38 +28,16 @@ public class ApplicationDbContext : IdentityDbContext<ApiUser>
 
        protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-/*
 
-                 migrationBuilder.CreateTable(
-            name: "SeenBy",
-            columns: table => new
-            {
-                Id = table.Column<string>(nullable: false),
-                MessagesId = table.Column<string>(nullable: false),
-                SeenTime = table.Column<DateTime>(nullable: false),
-                SeenWith = table.Column<string>(nullable: true)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_SeenBy", x => x.Id);
-                table.ForeignKey(
-                    name: "FK_SeenBy_Messages_MessagesId",
-                    column: x => x.MessagesId,
-                    principalTable: "Messages",
-                    principalColumn: "Id",
-                     onDelete: ReferentialAction.Cascade
-                    );
-            });
-*/
-     
+      modelBuilder.Entity<User>()
+        .HasMany(e => e.GroupChats)
+        .WithMany(e => e.Users)
+        .UsingEntity<GroupChatUser>();
 
-      modelBuilder.Entity<ChatUser>()
-      .HasKey(cs => new { cs.ChatId, cs.UserId });
-
-       modelBuilder.Entity<SeenBy>()
-        .HasOne(sb => sb.Messages)  
-        .WithMany(m => m.SeenBy)    
-        .HasForeignKey(sb => sb.MessagesId); 
+        modelBuilder.Entity<User>()
+        .HasMany(e => e.IndividualChats)
+        .WithMany(e => e.Users)
+        .UsingEntity<IndividualChatUser>();
 
       base.OnModelCreating(modelBuilder);
       modelBuilder.ApplyConfiguration(new RoleConfig());

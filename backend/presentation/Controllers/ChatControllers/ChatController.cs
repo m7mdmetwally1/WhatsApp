@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using Application.ChatsDto;
 using System.Diagnostics;
+using Application.Interfaces;
+using infrastructure.Repositories;
+using Microsoft.AspNetCore.Identity;
+using Domain.Entities;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -15,156 +19,83 @@ public class ChatController : ControllerBase
 
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly UserManager<ApiUser> _userManager;
+    private readonly IChatManager _chatManager;
+    private readonly IImageKitService _imageKitService;
+    private readonly IAuthMangaer _authManager;
+    private readonly ILogger<ChatController> _logger;
 
-    public ChatController(ApplicationDbContext context, IMapper mapper)
+    public ChatController(ApplicationDbContext context, IMapper mapper,UserManager<ApiUser> userManager,IChatManager chatManager,IImageKitService imageKitService,IAuthMangaer authManager,ILogger<ChatController> logger)
     {
         _context = context;
         this._mapper = mapper;
+        this._userManager = userManager;
+        this._chatManager = chatManager;
+        this._imageKitService = imageKitService;
+        this._authManager = authManager;
+        this._logger = logger;
     }
-
-
-    // [HttpGet("user/{userId}/chats")]
-    // [ProducesResponseType(StatusCodes.Status201Created)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult<IEnumerable<GetChatsDto>>> GetChats(string userId)
-    // {
-
-    //     if (userId == null)
-    //     {
-    //         return BadRequest("Invalid user ID.");
-    //     }
-
-    //     var chats = await _context.Chat
-    //     .Where(c => c.ChatUser.Any(cu => cu.UserId == userId))
-    //     .Include(c => c.Messages)
-    //     .Select(c => new
-    //     {
-    //         IsGroupChat = c.IsGroupChat,
-    //         GroupName = c.Name,
-    //         GroupImageUrl = c.IsGroupChat ? c.ImageUrl : null,
-    //         LastMessage = c.Messages.OrderByDescending(m => m.SentAt).Select(m => m.Content).FirstOrDefault(),
-    //         CustomName = !c.IsGroupChat ? c.ChatUser.Where(cu => cu.UserId == userId).Select(c => c.CustomName) : null,
-    //         Users = c.IsGroupChat ? c.ChatUser.Select(c => new { FirstName = c.User.FirstName, CustomName = c.CustomName }) : null
-    //     })
-    //     .ToListAsync();
-
-    //     if (chats == null || !chats.Any())
-    //     {
-    //         return NotFound("No chats found for this user.");
-    //     }
-
-    //     return Ok(chats);
-
-    // }
 
     [HttpGet("MyChats")]
-    public async Task<ActionResult> GetChats()
+    public async Task<ActionResult> GetChats(string userId)
     {
+        if(userId == null){
+            return BadRequest("should provide userId");
+        }
+        var user =await _userManager.FindByIdAsync(userId);
+        if(user ==null){
+            return BadRequest("user not valid");
+        }
+        var individualChats = await _chatManager.GetUserIndividualChats(userId);
+
+        var groupChats = await _chatManager.GetUserGroupChats(userId);
         
-    }
+        _logger.LogInformation($"{groupChats}");
+        var result = new { individualChats, groupChats };
 
-    [HttpPost("IndividualChat")]
-    public async Task<ActionResult> CreateChat()
-    {
-
-        //get users ids 
-        //check request need individual chat
-        // it should be just two ids
-        //check if there is chat for the two ids
-        // if yes --> update the custom name send 
-        //if no --> create the chat with custom name related to the sender and empty for the other 
-
+        if(individualChats != null && groupChats != null){
+            return Ok(result);
+        }
+        return StatusCode(500,"error , please try again");
     }
 
     [HttpPost("GroupChat")]
-    public async Task<ActionResult> CreateGroupChat()
+    public async Task<ActionResult> CreateGroupChat(CreateGroupChatDto createGroupChatDto)
     {
-        //validation
-        //1- check request needs group chat
-        //2- check every userId is valid --> related to valid user
-        //3- give the chat Id by ef
+       
+        if(createGroupChatDto.ChatType != ChatType.Group){
+            return BadRequest("you should specify chat type as Group");
+        }
 
-        //-create the chat
-
-    }
-
-    [HttpPost("AddGroupChatMember")]
-    public async Task<ActionResult> AddGroupChatMember()
-    {
-        //validation
-        //1-check the userid is valid
-        //2-authorize the Adder user
-        //3- check if user alow easy addation
-        //4-if yes --> add it auto 
-        //5- if no --> send link to  him to ask him to join
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult> NewChat(ChatDto chatDto)
-    {
-
-
-        var existingChat = await _context.Chat
-       .Where(c => !c.IsGroupChat)
-       .Where(c => c.ChatUser.Count == 2)
-       .Where(c => c.ChatUser.Any(cu => cu.User.Id == chatDto.UserIds[0]) &&
-                   c.ChatUser.Any(cu => cu.User.Id == chatDto.UserIds[1]))
-       .Include(m => m.ChatUser)
-       .FirstOrDefaultAsync();
-
-
-        if (existingChat != null)
-        {
-
-
-            foreach (var c in existingChat.ChatUser)
-            {
-
-                if (c.UserId == chatDto.Sender)
-                {
-                    c.CustomName = chatDto.CustomName;
-                }
+        foreach(var userId in createGroupChatDto.GroupChatUsers){
+            var user =await _userManager.FindByIdAsync(userId);
+            if(user == null){
+                return BadRequest("there is an valid user");
             }
-
-            await _context.SaveChangesAsync();
-            return Ok();
+        }  
+          
+        var GroupChatCreated =await _chatManager.CreateGroupChat(createGroupChatDto);
+        if(GroupChatCreated){
+            return Ok("created successfully");
         }
 
-
-        if (chatDto.UserIds.Count < 2)
-        {
-            return BadRequest("You must provide at least two users to create a chat.");
-        }
-
-        var chat = _mapper.Map<Chat>(chatDto);
-        chat.Id = Guid.NewGuid().ToString();
-
-        if (chatDto.IsGroupChat)
-        {
-
-            foreach (var user in chatDto.UserIds)
-            {
-                chat.ChatUser.Add(new ChatUser { UserId = user, CustomName = chatDto.CustomName });
-            }
-
-            chat.Name = chatDto.Name;
-
-        }
-
-        if (!chatDto.IsGroupChat)
-        {
-            chat.ChatUser.Add(new ChatUser { UserId = chatDto.Sender, CustomName = chatDto.CustomName });
-            chat.ChatUser.Add(new ChatUser { UserId = chatDto.otherSender });
-        }
-
-        _context.Chat.Add(chat);
-        await _context.SaveChangesAsync();
-
-        return Ok();
-
+        return StatusCode(500,"failed to create the chat please try again");
+       
     }
 
 }
 
+
+    // [HttpPost("AddGroupChatMember")]
+    // public async Task<ActionResult> AddGroupChatMember()
+    // {
+    //     //validation
+    //     //1-check the userid is valid
+    //     //2-authorize the Adder user
+    //     //3- check if user alow easy addation
+    //     //4-if yes --> add it auto 
+    //     //5- if no --> send link to  him to ask him to join
+    // }
+
+
+    

@@ -190,6 +190,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "ImageKit": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
             "MailKit": {
               "target": "Package",
               "version": "[4.7.1.1, )"
@@ -286,6 +290,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "ImageKit": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.8, )"
