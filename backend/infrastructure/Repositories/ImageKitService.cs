@@ -53,7 +53,7 @@ public class ImageKitService : IImageKitService
         try{ 
             Result resp = imagekit.Upload(ob2);
             _logger.LogInformation($"{resp.HttpStatusCode}");
-          return  new ImageKitResponse{ImageUrl = resp.url,FileId =resp.fileId};
+          return  new ImageKitResponse{ImageUrl = resp.url,ImageId =resp.fileId};
         }catch(Exception err){
             _logger.LogInformation($"{err}");
             return null;
@@ -63,11 +63,18 @@ public class ImageKitService : IImageKitService
 public async Task<bool>  DeleteImage(string imageId)
 {
     ImagekitClient imagekit = new ImagekitClient("public_w5izE1WwpvRFWesXz3v/g6w0FFs=", "private_431PL5FB4Rj/rrTsdwkMHLI/0AM=", "https://ik.imagekit.io/s1r03vuv9/whatsAppClone/");
+   
+    if(string.IsNullOrWhiteSpace(imageId))
+    {
+    return false;
+    }   
 
-    var apiKey = "private_431PL5FB4Rj/rrTsdwkMHLI/0AM=";
-    var encodedApiKey = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(apiKey));
+    ResultDelete res2 = imagekit.DeleteFile($"{imageId}");
 
-       ResultDelete res2 = imagekit.DeleteFile("");
+    if(res2 == null )
+    {
+        return false;
+    }
 
     return true;
 }

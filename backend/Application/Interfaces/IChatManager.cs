@@ -10,8 +10,8 @@ public interface IChatManager
     Task<bool> CreateGroupChat(CreateGroupChatDto chatDto);
     Task<GetChatResponse> GetIndividualChat(string senderUserIdstring ,string secondUserId);
     Task<bool> UpdateChatCustomName(string senderUserId,string customName,string chatId);
-    Task<bool> AddImageUrlToDatabase(string imageUrl,string GroupChatId);
-    Task<bool> AddUserImageUrlToDatabase(string imageUrl,string userId);
+    Task<bool> AddGroupImageUrlToDatabase(string imageUrl,string imageId,string GroupChatId);
+    Task<bool> AddUserImageUrlToDatabase(string imageUrl,string imageId,string userId);
     Task<bool> DeleteGroupImageKitImage(string imageId,string groupChatId);
     Task<IEnumerable<GetIndividualChat>> GetUserIndividualChats(string userId);    
     Task<IEnumerable<GetGroupChat>> GetUserGroupChats(string userId);   

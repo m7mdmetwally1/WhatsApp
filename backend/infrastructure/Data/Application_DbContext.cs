@@ -28,6 +28,8 @@ public class ApplicationDbContext : IdentityDbContext<ApiUser>
 
        protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Friend>()
+            .HasKey(f => new { f.UserId, f.Id });
 
       modelBuilder.Entity<User>()
         .HasMany(e => e.GroupChats)

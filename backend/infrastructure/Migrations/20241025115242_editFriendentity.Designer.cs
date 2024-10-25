@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using infrastructure.Data;
 
@@ -11,9 +12,11 @@ using infrastructure.Data;
 namespace infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241025115242_editFriendentity")]
+    partial class editFriendentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -284,9 +287,6 @@ namespace infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageId")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -328,13 +328,13 @@ namespace infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "c7cdd61e-4126-46c7-bdf0-43ed8ae0edea",
+                            Id = "c73078b0-377d-401d-bd4a-c41ff397289a",
                             Name = "Adminstrator",
                             NormalizedName = "ADMINSTRATOR"
                         },
                         new
                         {
-                            Id = "f6d5cf2e-4594-4dcf-aa92-14f00f807511",
+                            Id = "be65bd7a-480c-4ce1-bf7f-5be2e26a4685",
                             Name = "User",
                             NormalizedName = "USER"
                         });

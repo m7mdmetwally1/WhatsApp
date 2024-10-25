@@ -90,7 +90,7 @@ public class ChatManager : IChatManager
     return result > 0;
   }
  
-  public async Task<bool> AddImageUrlToDatabase(string imageUrl,string groupChatId)
+  public async Task<bool> AddGroupImageUrlToDatabase(string imageUrl,string imageId,string groupChatId)
   {
     if(imageUrl == null){
         return false;
@@ -103,6 +103,8 @@ public class ChatManager : IChatManager
     }
 
     GroupChat.ImageUrl = imageUrl;
+    GroupChat.ImageId =imageId;
+
     var result = await _context.SaveChangesAsync();
      
     return result > 0 ;     
@@ -117,6 +119,7 @@ public class ChatManager : IChatManager
     }
 
     groupChat.ImageUrl = "";    
+    groupChat.ImageId = "";    
 
     var result = await _context.SaveChangesAsync(); 
 
@@ -193,7 +196,7 @@ public class ChatManager : IChatManager
           return chats;
   }
 
-  public async Task<bool> AddUserImageUrlToDatabase(string imageUrl,string userId)
+  public async Task<bool> AddUserImageUrlToDatabase(string imageUrl,string imageId,string userId)
   {
     if(imageUrl == null){
       return false;
@@ -204,6 +207,8 @@ public class ChatManager : IChatManager
     }
 
     user.ImageUrl = imageUrl;
+    user.ImageId=imageId;
+
     var result = await _context.SaveChangesAsync();
 
     return result > 0;      

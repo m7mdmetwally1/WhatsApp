@@ -27,7 +27,7 @@ public class ChatController : ControllerBase
 
     public ChatController(ApplicationDbContext context, IMapper mapper,UserManager<ApiUser> userManager,IChatManager chatManager,IImageKitService imageKitService,IAuthMangaer authManager,ILogger<ChatController> logger)
     {
-        _context = context;
+        this._context = context;
         this._mapper = mapper;
         this._userManager = userManager;
         this._chatManager = chatManager;
@@ -59,7 +59,7 @@ public class ChatController : ControllerBase
         return StatusCode(500,"error , please try again");
     }
 
-    [HttpPost("GroupChat")]
+    [HttpPost("CreateGroupChat")]
     public async Task<ActionResult> CreateGroupChat(CreateGroupChatDto createGroupChatDto)
     {
        

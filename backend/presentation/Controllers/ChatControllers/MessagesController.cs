@@ -22,7 +22,50 @@ public class MessagesController : ControllerBase
         this._mapper = mapper;
         this._logger = _logger;
     }
+  
+    // [HttpGet]
+    // [Route("IndividualChat")]
+    // public  Task<ActionResult> IndividualChatMessages()
+    // {
+    //     //
+    // }
 
+    // [HttpGet]
+    // [Route("GroupChat")]
+    // public  Task<ActionResult> GroupChatMessages()
+    // {
+
+    // }
+
+    // [HttpPost]
+    // [Route("InsertMessage")]
+    // public Task<ActionResult> InsertMessage()
+    // {
+
+    // }
+
+    // [HttpPost]
+    // [Route("Open/IndividualChat")]
+    // public Task<ActionResult> OpenIndividualChat()
+    // {
+
+    // }
+
+    // [HttpPost]
+    // [Route("Open/GroupChat")]
+    // public  Task<ActionResult> OpenGroupChat()
+    // {
+
+    // }
+
+    // [HttpPost]
+    // [Route("EditMessageContent")]
+    // public Task<ActionResult> EditMessagesContent()
+    // {
+    //     return Ok();
+    // }
+
+    //-------------------------------------------------------
     // [HttpGet]
     // [ProducesResponseType(StatusCodes.Status201Created)]
     // [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -16,9 +16,7 @@ public interface IAuthMangaer
      Task<bool> VerifyEmail (string email,string phoneNumber);
      Task<bool> SendTwoFactorCode (string phoneNumber);
      Task<AuthResponseDto> Login(LoginDto loginDto);
-     Task<ImageKitResponse> UploadImage( IFormFile imageUrl);
-     Task<bool> DeleteUserImageKitImage(string imageId,string userId );
-     Task<bool> AddFriend(CreateIndividualChatDto chatDto);
+
     //  Task<string> CreateRefreshToken();
     //  Task<string> VerifyRefreshToken();   
 }

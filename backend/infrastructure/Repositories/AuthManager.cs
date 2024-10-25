@@ -285,62 +285,6 @@ public async Task<bool> SendTwoFactorCode(string phoneNumber){
 
 }
 
-  public async Task<ImageKitResponse> UploadImage(IFormFile imageUrl)
-  {
-    if(imageUrl == null){
-      return null;
-    }
-      var imageKitResponse =  await _imageKitService.UploadImage(imageUrl);
-      if(imageKitResponse == null){
-        return null;
-      }
-      return imageKitResponse;
-  }
-
-  public async Task<bool> DeleteUserImageKitImage(string imageId,string userId){
-    
-    var user = await _context.User.Where(u=>u.Id == userId).FirstOrDefaultAsync(); 
-    if(user == null){
-    return false;
-    }
-
-    user.ImageUrl = "";     
-    var result = await _context.SaveChangesAsync();
-    if(result > 0){
-      return false;
-    }
-
-    var deleteResult = await _imageKitService.DeleteImage(imageId);
-    if(!deleteResult){
-      return false;
-    }
-
-    return true;
-  }
-
-  public async Task<bool> AddFriend(CreateIndividualChatDto chatDto)
-  {
-    
-    var user =await _context.User.Include(u=>u.Friends).Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
-    var friend =await _context.User.Where(u => u.Id == chatDto.SecondUserId).FirstOrDefaultAsync();
-    if(user == null || friend == null){
-      return false;
-    }
-
-    var isFriendAlready = user.Friends.Any(f => f.Id == friend.Id);
-
-    if (isFriendAlready)
-    {
-        return true;
-    }
-  
-    user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??""});
-
-    var result =await  _context.SaveChangesAsync();
-
-    return result > 0;
-  }
-
  
 }
 

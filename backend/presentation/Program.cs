@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Identity;
 
 
-/*
+/*dont forget today deploy
 --project infrastructure/infrastructure.csproj --startup-project presentation/presentation.csproj
 /* 
 
@@ -31,10 +31,7 @@ use redis
 use .net caching methods
 use database performance methods INDEX , PRODEDURAL
 */
-/*
-move friend and upload methods to separate file
-check them in chat and authentication controller
-*/
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +47,7 @@ builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 
 builder.Services.AddScoped<IAuthMangaer, AuthManager>();
+builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IChatManager, ChatManager>();
 builder.Services.AddTransient<ISmsSender, AuthMessageSender>();
 builder.Services.AddTransient<IEmailSender, AuthMessageSender>();
