@@ -123,6 +123,13 @@ namespace infrastructure.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("GroupCreatorId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -136,15 +143,15 @@ namespace infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.chatEntities.GroupChatUser", b =>
                 {
-                    b.Property<string>("GroupChatId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("GroupChatId", "UserId");
+                    b.Property<string>("GroupChatId")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.HasIndex("UserId");
+                    b.HasKey("UserId", "GroupChatId");
+
+                    b.HasIndex("GroupChatId");
 
                     b.ToTable("GroupChatUser");
                 });
@@ -167,10 +174,6 @@ namespace infrastructure.Migrations
 
                     b.Property<DateTime>("SeenTime")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("SenderName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("SentAt")
                         .HasColumnType("datetime2");
@@ -234,10 +237,6 @@ namespace infrastructure.Migrations
                     b.Property<DateTime>("SeenTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("SenderName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("SentAt")
                         .HasColumnType("datetime2");
 
@@ -259,7 +258,6 @@ namespace infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("MessagesId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("SeenTime")
@@ -268,7 +266,7 @@ namespace infrastructure.Migrations
                     b.Property<string>("SeenWith")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id", "MessagesId");
 
                     b.HasIndex("MessagesId");
 
@@ -328,13 +326,13 @@ namespace infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "c7cdd61e-4126-46c7-bdf0-43ed8ae0edea",
+                            Id = "fed643d9-f3d0-4515-9331-dfb3e8e7ac48",
                             Name = "Adminstrator",
                             NormalizedName = "ADMINSTRATOR"
                         },
                         new
                         {
-                            Id = "f6d5cf2e-4594-4dcf-aa92-14f00f807511",
+                            Id = "40fa6172-7d23-48c0-ab71-9dd9e7a8292e",
                             Name = "User",
                             NormalizedName = "USER"
                         });

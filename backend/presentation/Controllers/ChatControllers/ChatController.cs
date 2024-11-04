@@ -65,7 +65,7 @@ public class ChatController : ControllerBase
        
         if(createGroupChatDto.ChatType != ChatType.Group){
             return BadRequest("you should specify chat type as Group");
-        }
+        }        
 
         foreach(var userId in createGroupChatDto.GroupChatUsers){
             var user =await _userManager.FindByIdAsync(userId);
@@ -73,29 +73,57 @@ public class ChatController : ControllerBase
                 return BadRequest("there is an valid user");
             }
         }  
-          
-        var GroupChatCreated =await _chatManager.CreateGroupChat(createGroupChatDto);
-        if(GroupChatCreated){
-            return Ok("created successfully");
+
+        try
+        {
+            var GroupChatCreated =await _chatManager.CreateGroupChat(createGroupChatDto);
+            if(GroupChatCreated)  return Ok("created successfully");
+
+            return StatusCode(500,"failed to create the chat please try again"); 
+
+        }catch(Exception ex)
+        {
+            return BadRequest(new { StatusCode = 400, Message = ex.Message });
+        }         
+    }
+
+    [HttpPost]
+    [Route("AddGroupMember")]
+    public async Task<ActionResult> AddGroupMember(string userId,string chatId,string creatorId)
+    {
+        if(userId== null){
+            return BadRequest("user Id is required");
         }
 
-        return StatusCode(500,"failed to create the chat please try again");
-       
+        if(chatId == null){
+            return BadRequest("chatId is required");
+        }
+        
+        try
+        {
+            var result = await _chatManager.AddGroupMember(userId,chatId,creatorId);
+            if(result)  return Ok();
+            return BadRequest(new { StatusCode = 400, Message = "An unexpected error occurred." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { StatusCode = 400, Message = ex.Message });
+        }
+         catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { StatusCode = 404, Message = ex.Message });
+        }
+         catch (Exception ex)
+        {       
+            return StatusCode(500, new { StatusCode = 500, Message = "An unexpected error occurred." });
+        }
+                     
     }
 
 }
 
 
-    // [HttpPost("AddGroupChatMember")]
-    // public async Task<ActionResult> AddGroupChatMember()
-    // {
-    //     //validation
-    //     //1-check the userid is valid
-    //     //2-authorize the Adder user
-    //     //3- check if user alow easy addation
-    //     //4-if yes --> add it auto 
-    //     //5- if no --> send link to  him to ask him to join
-    // }
+
 
 
     

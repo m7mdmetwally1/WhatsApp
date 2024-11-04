@@ -16,20 +16,36 @@ using Microsoft.AspNetCore.Identity;
 
 /*dont forget today deploy
 --project infrastructure/infrastructure.csproj --startup-project presentation/presentation.csproj
-/* 
+in message manager--> open individual chat --> if no messages to change --> handling this will be with try catch
 
-implement Message Controller
-signalir 
+/* 
+restructure dto files and project
+unit test messagecontroller but with swager not like the course
+remove warning messages
+31/10
+signalir
+11/11
 frontend
+21/11
 deploy
+24/11
 */
+
 /*
-using test 
+unit test 
 add caller
 add story 
+Add notifications 
 use redis
 use .net caching methods
 use database performance methods INDEX , PRODEDURAL
+active friends using singalir and redis
+*/
+
+/*
+another features
+allow removing group members
+making group members add or remove members 
 */
 
 
@@ -43,10 +59,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddAutoMapper(typeof(MapperConfig));
 
-
-
-
 builder.Services.AddScoped<IAuthMangaer, AuthManager>();
+builder.Services.AddScoped<IMessagesManager,MessagesManager>();
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IChatManager, ChatManager>();
 builder.Services.AddTransient<ISmsSender, AuthMessageSender>();

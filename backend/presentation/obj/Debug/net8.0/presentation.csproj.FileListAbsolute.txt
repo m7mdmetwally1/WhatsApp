@@ -37,6 +37,10 @@ E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\runtimes\win-x64\nati
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Application.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Domain.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\infrastructure.dll
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\infrastructure.pdb
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Domain.pdb
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Application.pdb
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\presentation.pdb
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Azure.Core.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Azure.Identity.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
@@ -141,9 +145,6 @@ E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\runtimes\win\lib\net6
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Runtime.Caching.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
-E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\infrastructure.pdb
-E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Domain.pdb
-E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Application.pdb
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.csproj.AssemblyReference.cache
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.GeneratedMSBuildEditorConfig.editorconfig
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.AssemblyInfoInputs.cache
@@ -167,7 +168,6 @@ E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\appsettings.Developme
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\appsettings.json
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\presentation.deps.json
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\presentation.runtimeconfig.json
-E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\presentation.pdb
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presenta.D2D87D9E.Up2Date
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.genruntimeconfig.cache
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\ref\presentation.dll

@@ -16,4 +16,5 @@ public interface IChatManager
     Task<IEnumerable<GetIndividualChat>> GetUserIndividualChats(string userId);    
     Task<IEnumerable<GetGroupChat>> GetUserGroupChats(string userId);   
     Task<bool> DeleteFriend(CreateIndividualChatDto chatDto); 
+    Task<bool> AddGroupMember(string chatId,string userId,string creator);  
 }   

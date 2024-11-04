@@ -5,6 +5,10 @@ using infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Application.Interfaces;
+using Application.Common;
+
+
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -15,220 +19,201 @@ public class MessagesController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
+    private readonly IMessagesManager _messagesManager;
 
-    public MessagesController(ApplicationDbContext context, IMapper mapper, ILogger<MessagesController> _logger)
+    public MessagesController(ApplicationDbContext context, IMapper mapper, ILogger<MessagesController> _logger,IMessagesManager messagesManager)
     {
         this._context = context;
         this._mapper = mapper;
         this._logger = _logger;
+        this._messagesManager = messagesManager;
     }
-  
-    // [HttpGet]
-    // [Route("IndividualChat")]
-    // public  Task<ActionResult> IndividualChatMessages()
-    // {
-    //     //
-    // }
+    
+    [HttpGet]
+    [Route("IndividualChat")]
+    public async Task<ActionResult> IndividualChatMessages(string chatId,string userId)
+    {         
+       
+        var result = await _messagesManager.IndividualChatMessages(userId, chatId);
 
-    // [HttpGet]
-    // [Route("GroupChat")]
-    // public  Task<ActionResult> GroupChatMessages()
-    // {
+        if(result.StatusCode == 500)
+        {
+            return StatusCode(500,new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"}); 
+        }
+        if(result.StatusCode == 400)
+        {
+            return BadRequest(new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"});
+        }
 
-    // }
+        return Ok(result);       
+    }
 
-    // [HttpPost]
-    // [Route("InsertMessage")]
-    // public Task<ActionResult> InsertMessage()
-    // {
+    [HttpGet]
+    [Route("GroupChat")]
+    public async  Task<ActionResult> GroupChatMessages(string chatId,string userId)
+    {               
+        var result = await _messagesManager.GroupChatMessages(userId, chatId);
 
-    // }
+        if(result.StatusCode == 500)
+        {
+            return StatusCode(500,new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"}); 
+        }
+        if(result.StatusCode == 400)
+        {
+            return BadRequest(new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"});
+        }
 
-    // [HttpPost]
-    // [Route("Open/IndividualChat")]
-    // public Task<ActionResult> OpenIndividualChat()
-    // {
+        return Ok(result);
+    }
 
-    // }
+    [HttpPost]
+    [Route("InsertMessage/IndividualChat")]
+    public async Task<ActionResult> InsertMessage(InsertIndividualMessageDto message)
+    {
+       
+        if(ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-    // [HttpPost]
-    // [Route("Open/GroupChat")]
-    // public  Task<ActionResult> OpenGroupChat()
-    // {
+       var result =  await _messagesManager.InsertIndividualMessage(message);
 
-    // }
+        if(result.StatusCode == 400)
+        {
+            return BadRequest($"{result.Message}");
+        }
 
-    // [HttpPost]
-    // [Route("EditMessageContent")]
-    // public Task<ActionResult> EditMessagesContent()
-    // {
-    //     return Ok();
-    // }
+        if(result.StatusCode == 200)
+        {
+            return Ok($"{result.Message}");
+        }
 
-    //-------------------------------------------------------
-    // [HttpGet]
-    // [ProducesResponseType(StatusCodes.Status201Created)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<IEnumerable<MessageDto>> UserChatMessages(string chatId)
-    // {
+        return BadRequest($"{result.Message}"); 
+    }
 
-    //     var messages = await _context.Messages
-    //    .Where(m => m.Chat.Id == chatId)
-    //     .Include(m => m.User)
-    //     .OrderBy(m => m.SentAt)
-    //    .ToListAsync();
+    [HttpPost]
+    [Route("InsertMessage/GroupChat")]
+    public async Task<ActionResult> InsertMessage(InsertGroupMessageDto message)
+    {
+        if(message.UserId == null){
+            return BadRequest("user Id is required");
+        }
 
-    //     var returnedMessages = messages.Select(m => new MessageDto
-    //     {
-    //         Id = m.Id,
-    //         Content = m.Content,
-    //         SentAt = m.SentAt,
-    //         MessageSender = m.User.FirstName,
-    //         IsRead = m.IsRead,
-    //         SeenBy = m.SeenBy.ToList()
+        if(message.ChatId == null){
+            return BadRequest("chatId is required");
+        }
+        
+       var result =  await _messagesManager.InsertGroupMessage(message);
 
-    //     }
-    //     );
+        if(result.StatusCode == 400)
+        {
+            return BadRequest($"{result.Message}");
+        }
 
-    //     return returnedMessages;
+        if(result.StatusCode == 200)
+        {
+            return Ok($"{result.Message}");
+        }
 
-    // }
+            return BadRequest($"{result.Message}");
+    }
 
+    [HttpPost]
+    [Route("Open/IndividualChat")]
+    public async Task<ActionResult> OpenIndividualChat(string userId,string chatId)
+    {
+        if(userId== null){
+            return BadRequest("user Id is required");
+        }
 
-    // [HttpPost("api/Messages/Insert")]
-    // [ProducesResponseType(StatusCodes.Status201Created)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<IActionResult> InsertMessage(InsertMessageDto messageDto)
-    // {
+        if(chatId == null){
+            return BadRequest("chatId is required");
+        }
 
-    //     var messageInserted = new MessageDto
-    //     {
-    //         Id = Guid.NewGuid().ToString(),
-    //         Content = messageDto.Content
-    //     };
+       var result = await _messagesManager.OpenIndividualChat(userId,chatId);
 
-    //     var user = _context.User.FirstOrDefault(u => u.Id == messageDto.SenderId);
-    //     var chat = _context.Chat.FirstOrDefault(c => c.Id == messageDto.ChatId);
+        
+        if(result.StatusCode == 400)
+        {
+            return BadRequest($"{result.Message}");
+        }
 
-    //     if (user == null)
-    //     {
+        if(result.StatusCode == 200)
+        {
+            return BadRequest($"{result.Message}");
+        }
 
-    //         throw new Exception("User not found");
-    //     }
+            return BadRequest($"{result.Message}");
 
-    //     if (chat == null)
-    //     {
+    }
 
-    //         throw new Exception("Chat not found");
-    //     }
+    [HttpPost]
+    [Route("Open/GroupChat")]
+    public async Task<ActionResult> OpenGroupChat(string userId,string chatId)
+    {
+        if(userId== null){
+            return BadRequest("user Id is required");
+        }
 
-    //     var message = _mapper.Map<Messages>(messageInserted);
-    //     message.User = user;
-    //     message.Chat = chat;
-    //     message.SentAt = DateTime.UtcNow;
+        if(chatId == null){
+            return BadRequest("chatId is required");
+        }
 
-    //     _context.Messages.Add(message);
-    //     await _context.SaveChangesAsync();
+       var result = await _messagesManager.OpenGroupChat(userId,chatId);
 
-    //     return Ok();
-    // }
+        
+        if(result.StatusCode == 400)
+        {
+            return BadRequest($"{result.Message}");
+        }
 
+        if(result.StatusCode == 200)
+        {
+            return Ok($"{result.Message}");
+        }
 
-    // [HttpPost("api/Messages/OpenChat")]
-    // [ProducesResponseType(StatusCodes.Status201Created)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult> OpenChat(string chatId, string userOpenedId)
-    // {
+            return BadRequest($"{result.Message}");
 
-    //     var messages = await _context.Messages
-    //     .Where(m => m.Chat.Id == chatId && !m.IsRead)
-    //     .Include(m => m.User)
-    //     .ToListAsync();
+    }
 
-    //     var seen = messages[0].User.Id == userOpenedId ? false : true;
+    [HttpPost]
+    [Route("ChangeContent")]
+    public async Task<ActionResult> ChangeContent(string userId,string chatId,string messageId,string newContent)
+    {
+        if(userId== null){
+            return BadRequest("user Id is required");
+        }
 
-    //     if (seen)
-    //     {
-    //         foreach (var m in messages)
-    //         {
-    //             m.IsRead = true;
-    //             m.SeenTime = DateTime.UtcNow;
-
-    //         }
-
-
-    //     }
-
-    //     await _context.SaveChangesAsync();
-
-
-
-
-    //     return Ok();
-
-    // }
-
-
-
-    // [HttpPost("api/Messages/OpenGroupChat")]
-    // [ProducesResponseType(StatusCodes.Status201Created)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult> OpenGroupChat(string chatId, string userId)
-    // {
-
-    //     var chat = await _context.Chat
-    //                     .Include(m => m.ChatUser)
-    //                     .FirstOrDefaultAsync(m => m.Id == chatId);
-
-    //     var chatUsersCount = chat.ChatUser.ToList().Count;
-
-    //     var user = await _context.User
-    //         .Where(m => m.Id == userId)
-    //         .FirstOrDefaultAsync();
-
-    //     if (user == null)
-    //     {
-    //         return BadRequest("there is no user with this id ");
-    //     }
-
-    //     var messages = await _context.Messages
-    //     .Where(m => m.Chat.Id == chatId && !m.IsRead)
-    //      .Include(m => m.User)
-    //      .Include(m => m.SeenBy)
-    //      .ToListAsync();
-
-    //     foreach (var m in messages)
-    //     {
-    //         var seenBy = new SeenBy
-    //         {
-    //             Id = Guid.NewGuid().ToString(),
-    //             SeenWith = user.FirstName,
-    //             SeenTime = DateTime.UtcNow,
-    //             MessagesId = m.Id
-    //         };
-
-    //         if (m.SeenBy.Any(s => s.SeenWith == seenBy.SeenWith))
-    //         {
-    //             return Ok();
-    //         }
-    //         m.SeenBy.Add(seenBy);
-
-    //         if (m.SeenBy.Count == chatUsersCount)
-    //         {
-    //             m.IsRead = true;
-
-    //         }
-
-    //     }
-
-
-
-    //     await _context.SaveChangesAsync();
-    //     return Ok();
-
-    // }
-
+        if(chatId == null){
+            return BadRequest("chatId is required");
+        }
+                             
+        try
+        {
+           var result = await _messagesManager.ChangeIndividualChatMessageContent(userId,chatId,messageId,newContent);
+            if(result)  return Ok();
+            return BadRequest(new { StatusCode = 400, Message = "An unexpected error occurred." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { StatusCode = 400, Message = ex.Message });
+        }
+         catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { StatusCode = 404, Message = ex.Message });
+        }
+         catch (Exception ex)
+        {       
+            return StatusCode(500, new { StatusCode = 500, Message = "An unexpected error occurred." });
+        }
+    }    
 }
+
+ 
+
+
+
+
 
 
 

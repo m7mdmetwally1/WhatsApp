@@ -7,3 +7,7 @@ createRoot(document.getElementById("root")).render(
     <App />
   </StrictMode>
 );
+//how to use react query
+//import queryClient
+//install i@tanstack/react-query-devtools
+//

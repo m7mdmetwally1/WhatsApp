@@ -19,15 +19,17 @@ public class ChatManager : IChatManager
     private readonly IImageKitService _imageKitService;
     private readonly IAuthMangaer _authMangaer;
     private readonly ILogger<ChatManager> _logger;
+    private readonly IUserManager _userManager;
 
-    public ChatManager(ApplicationDbContext context,IMapper mapper,IImageKitService imageKitService,IAuthMangaer authMangaer,ILogger<ChatManager> logger )
+    public ChatManager(ApplicationDbContext context,IMapper mapper,IImageKitService imageKitService,IAuthMangaer authMangaer,ILogger<ChatManager> logger,IUserManager userManager )
   {
       this._context = context;
       this._mapper = mapper;
       this._imageKitService = imageKitService;
       this._authMangaer = authMangaer;
         this._logger = logger;
-    }
+        this._userManager = userManager;
+  }
   public async Task<bool> CreateChat(CreateIndividualChatDto chatDto)
   {
       var newChat = _mapper.Map<IndividualChat>(chatDto);
@@ -36,7 +38,7 @@ public class ChatManager : IChatManager
       newChat.IndividualChatUser.Add(new IndividualChatUser{UserId = chatDto.SenderUserId,IndividualChatId = newChat.Id,CustomName = chatDto.CustomName ?? ""});
       newChat.IndividualChatUser.Add(new IndividualChatUser{UserId = chatDto.SecondUserId,IndividualChatId = newChat.Id});
       
-      var chat =  _context.IndividualChat.Add(newChat);  
+        _context.IndividualChat.Add(newChat);  
       var result =  await _context.SaveChangesAsync();
 
       return result > 0;
@@ -47,13 +49,24 @@ public class ChatManager : IChatManager
           
     GroupChat.Id = Guid.NewGuid().ToString();
 
+    var creator = await _context.User.Where(u=>u.Id == chatDto.GroupChatCreator).FirstOrDefaultAsync();
+
+    if(creator == null)
+    {
+       throw new ArgumentException("creatorId doesnt exist");
+    }
+
     foreach(var userId in chatDto.GroupChatUsers){
       var existingMember = GroupChat.Members.FirstOrDefault(m => m.UserId == userId);
       if(existingMember == null){
           GroupChat.Members.Add(new GroupChatUser{UserId = userId,GroupChatId =GroupChat.Id});
-      }
-      
-    }    
+      }      
+    } 
+    var exist =chatDto.GroupChatUsers.Contains(chatDto.GroupChatCreator);
+
+    if(!exist) GroupChat.Members.Add(new GroupChatUser{UserId=creator.Id ,GroupChatId=GroupChat.Id});
+    
+    GroupChat.GroupCreatorId= creator.Id; 
     
     _context.Chat.Add(GroupChat);
 
@@ -231,8 +244,45 @@ public class ChatManager : IChatManager
     return result > 0;
   }
 
-    
+  public async Task<bool> AddGroupMember(string userId,string chatId,string creatorId)
+  {
+      var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
+      var creator =await _context.User.Where(u=>u.Id == creatorId ).FirstOrDefaultAsync();
+
+      if(user == null || creator ==null)
+      {            
+          throw new ArgumentException("There is no user with this Id , check user and creator ids");
+      }       
+
+      var chat = await _context.Chat.Where(c=>c.Id== chatId).FirstOrDefaultAsync();
+
+      if(chat == null)
+      {
+          throw new ArgumentException("There is no chat with this ID", nameof(chatId));
+      }
+
+      if(creator.Id != chat.GroupCreatorId)
+      {
+        throw new ArgumentException("only creator can add members");
+      }
+
+      var isMemeberOfTheChat =  chat.Members.Exists(cu=>cu.UserId==userId);
+
+      if(isMemeberOfTheChat)
+      {
+          throw new ArgumentException("user already member of the group", nameof(userId));
+      }
+
+      chat.Members.Add(new GroupChatUser{GroupChatId = chat.Id , UserId= userId});
+
+      var result = await _context.SaveChangesAsync();
+
+      if(result == 0) throw new ArgumentException("failed to add to group", nameof(userId));
+      
+      return result > 0;
+  }
 }
+
     
   
 
