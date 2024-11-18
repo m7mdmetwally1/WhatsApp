@@ -292,6 +292,10 @@ namespace infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("User");
@@ -326,13 +330,13 @@ namespace infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "fed643d9-f3d0-4515-9331-dfb3e8e7ac48",
+                            Id = "1a3bd546-3999-4642-b765-a170aa4a8215",
                             Name = "Adminstrator",
                             NormalizedName = "ADMINSTRATOR"
                         },
                         new
                         {
-                            Id = "40fa6172-7d23-48c0-ab71-9dd9e7a8292e",
+                            Id = "1ad7c2c9-7819-49b4-9f5e-a85f2c038622",
                             Name = "User",
                             NormalizedName = "USER"
                         });

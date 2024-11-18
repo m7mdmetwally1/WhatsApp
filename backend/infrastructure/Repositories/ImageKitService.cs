@@ -22,14 +22,13 @@ public class ImageKitService : IImageKitService
     {
         this._logger = _logger;
     }
+
     public async  Task<ImageKitResponse> UploadImage(IFormFile imageUrl){
         ImagekitClient imagekit = new ImagekitClient("public_w5izE1WwpvRFWesXz3v/g6w0FFs=", "private_431PL5FB4Rj/rrTsdwkMHLI/0AM=", "https://ik.imagekit.io/s1r03vuv9/whatsAppClone/");
-       
-        // var apiKey = "private_431PL5FB4Rj/rrTsdwkMHLI/0AM=";
-        // var encodedApiKey = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(apiKey));
+
          string base64Image = await FileConverter.ConvertFormFileToBase64(imageUrl);   
 
-                var transformation = new UploadTransformation
+        var transformation = new UploadTransformation
         {
             pre = "w-300,h-400",  
             post = new List<PostTransformation>  
@@ -47,17 +46,25 @@ public class ImageKitService : IImageKitService
             file = base64Image,
             fileName = Guid.NewGuid().ToString(),
            transformation =transformation,
-        }  ;       
-        
-      
-        try{ 
-            Result resp = imagekit.Upload(ob2);
-            _logger.LogInformation($"{resp.HttpStatusCode}");
-          return  new ImageKitResponse{ImageUrl = resp.url,ImageId =resp.fileId};
-        }catch(Exception err){
-            _logger.LogInformation($"{err}");
-            return null;
+        } ;
+
+        Result resp;
+        try
+        {             
+         resp =  imagekit.Upload(ob2);
+         _logger.LogInformation($"{resp.HttpStatusCode}"); 
+
+        if(resp.HttpStatusCode != 200 && resp.HttpStatusCode != 202)
+        {
+            return  new ImageKitResponse{Message="Failed to upload image ,connection",Success=false};
         }
+                     
+        }catch(Exception err){           
+            _logger.LogInformation($"{err}");
+            return new ImageKitResponse{Message=$" internal server error",Success=false};
+        }
+
+        return  new ImageKitResponse{ImageUrl = resp.url,ImageId =resp.fileId,Success=true};
 } 
 
 public async Task<bool>  DeleteImage(string imageId)
@@ -69,7 +76,7 @@ public async Task<bool>  DeleteImage(string imageId)
     return false;
     }   
 
-    ResultDelete res2 = imagekit.DeleteFile($"{imageId}");
+    ResultDelete res2 = await Task.Run(() => imagekit.DeleteFile(imageId));
 
     if(res2 == null )
     {

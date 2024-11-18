@@ -1,14 +1,16 @@
 using Domain.Entities.chatEntities;
+using Application.ChatsDto;
 using Microsoft.AspNetCore.Mvc;
 using infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
-using Application.ChatsDto;
 using System.Diagnostics;
 using Application.Interfaces;
 using infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Domain.Entities;
+using Application.Common;
+using Microsoft.Azure.Amqp.Framing;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -39,85 +41,58 @@ public class ChatController : ControllerBase
     [HttpGet("MyChats")]
     public async Task<ActionResult> GetChats(string userId)
     {
+    
         if(userId == null){
             return BadRequest("should provide userId");
         }
-        var user =await _userManager.FindByIdAsync(userId);
-        if(user ==null){
-            return BadRequest("user not valid");
-        }
-        var individualChats = await _chatManager.GetUserIndividualChats(userId);
+            
+        var individualChatsResult = await _chatManager.GetUserIndividualChats(userId);
 
-        var groupChats = await _chatManager.GetUserGroupChats(userId);
+       if(!individualChatsResult.Success)
+            {
+                return StatusCode(500,new {Success=false,ErrorMessage=$"{individualChatsResult.Message}"}); 
+            }  
         
-        _logger.LogInformation($"{groupChats}");
-        var result = new { individualChats, groupChats };
 
-        if(individualChats != null && groupChats != null){
-            return Ok(result);
-        }
-        return StatusCode(500,"error , please try again");
+        var groupChatsResults = await _chatManager.GetUserGroupChats(userId);
+        
+        if(!groupChatsResults.Success)
+            {
+                return StatusCode(500,new {Success=false,ErrorMessage=$"{groupChatsResults.Message}"}); 
+            }  
+        var allChats = individualChatsResult.Data.Concat(groupChatsResults.Data);              
+
+        return Ok(new { Success= individualChatsResult.Success,Data = allChats});
     }
 
     [HttpPost("CreateGroupChat")]
     public async Task<ActionResult> CreateGroupChat(CreateGroupChatDto createGroupChatDto)
-    {
-       
-        if(createGroupChatDto.ChatType != ChatType.Group){
-            return BadRequest("you should specify chat type as Group");
-        }        
+    {                         
 
-        foreach(var userId in createGroupChatDto.GroupChatUsers){
-            var user =await _userManager.FindByIdAsync(userId);
-            if(user == null){
-                return BadRequest("there is an valid user");
-            }
-        }  
-
-        try
+        
+        var result =await _chatManager.CreateGroupChat(createGroupChatDto);
+               
+        if(!result.Success)
         {
-            var GroupChatCreated =await _chatManager.CreateGroupChat(createGroupChatDto);
-            if(GroupChatCreated)  return Ok("created successfully");
+            return BadRequest(new {Success=false,ErrorMessage=$"{result.Message}"});
+        }
 
-            return StatusCode(500,"failed to create the chat please try again"); 
-
-        }catch(Exception ex)
-        {
-            return BadRequest(new { StatusCode = 400, Message = ex.Message });
-        }         
+        return Ok(new {Success=true,Message=result.Message}); 
+             
     }
 
     [HttpPost]
     [Route("AddGroupMember")]
     public async Task<ActionResult> AddGroupMember(string userId,string chatId,string creatorId)
-    {
-        if(userId== null){
-            return BadRequest("user Id is required");
+    {                   
+        var result = await _chatManager.AddGroupMember(userId,chatId,creatorId);
+               
+         if(!result.Success)
+        {
+            return BadRequest(new {Success=false,ErrorMessage=$"{result.Message}"});
         }
 
-        if(chatId == null){
-            return BadRequest("chatId is required");
-        }
-        
-        try
-        {
-            var result = await _chatManager.AddGroupMember(userId,chatId,creatorId);
-            if(result)  return Ok();
-            return BadRequest(new { StatusCode = 400, Message = "An unexpected error occurred." });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { StatusCode = 400, Message = ex.Message });
-        }
-         catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { StatusCode = 404, Message = ex.Message });
-        }
-         catch (Exception ex)
-        {       
-            return StatusCode(500, new { StatusCode = 500, Message = "An unexpected error occurred." });
-        }
-                     
+        return Ok(new {Success=true,Message=result.Message});                     
     }
 
 }

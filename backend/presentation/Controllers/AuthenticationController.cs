@@ -24,6 +24,11 @@ public class AuthenticationController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Register(ApiUserDto userDto)
     {
+        if(!ModelState.IsValid)
+        {
+            return BadRequest("Invalid request");
+        }
+
         var errors = await _authManager.Register(userDto);
 
         if (errors.Any())
@@ -57,7 +62,7 @@ public class AuthenticationController : ControllerBase
 
         var result = await _authManager.Login(login);
 
-        if (result == null)
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
         {
             return BadRequest("Invalid login data");
         }
@@ -78,7 +83,7 @@ public class AuthenticationController : ControllerBase
 
         if (result == false)
         {
-            return BadRequest("try again later");
+            return BadRequest(" failed to verify your number try again later");
         }
 
         return Ok(result);
@@ -94,6 +99,7 @@ public class AuthenticationController : ControllerBase
         {
             return BadRequest();
         }
+
         return Ok("Phone Number Confirmed");
     }
 

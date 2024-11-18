@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Application.Interfaces;
 using Application.Common;
 
-
-
 namespace presentation.Controllers.ChatControllers;
 
 [ApiController]
@@ -36,34 +34,26 @@ public class MessagesController : ControllerBase
        
         var result = await _messagesManager.IndividualChatMessages(userId, chatId);
 
-        if(result.StatusCode == 500)
+         if(!result.Success)
         {
-            return StatusCode(500,new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"}); 
-        }
-        if(result.StatusCode == 400)
-        {
-            return BadRequest(new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"});
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }        
 
-        return Ok(result);       
+        return Ok(new {Success=result.Success,Data=result.Data});       
     }
-
+    
     [HttpGet]
     [Route("GroupChat")]
     public async  Task<ActionResult> GroupChatMessages(string chatId,string userId)
     {               
         var result = await _messagesManager.GroupChatMessages(userId, chatId);
 
-        if(result.StatusCode == 500)
+        if(!result.Success)
         {
-            return StatusCode(500,new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"}); 
-        }
-        if(result.StatusCode == 400)
-        {
-            return BadRequest(new Result<GetIndividualMessagesDto>{Success=false,ErrorMessage=$"{result.ErrorMessage}"});
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }        
 
-        return Ok(result);
+        return Ok(new {Success=result.Success,Data=result.Data});
     }
 
     [HttpPost]
@@ -71,79 +61,57 @@ public class MessagesController : ControllerBase
     public async Task<ActionResult> InsertMessage(InsertIndividualMessageDto message)
     {
        
-        if(ModelState.IsValid)
+        if(!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
        var result =  await _messagesManager.InsertIndividualMessage(message);
 
-        if(result.StatusCode == 400)
+        if(!result.Success)
         {
-            return BadRequest($"{result.Message}");
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }        
 
-        if(result.StatusCode == 200)
-        {
-            return Ok($"{result.Message}");
-        }
-
-        return BadRequest($"{result.Message}"); 
+        return Ok(new {Success=result.Success,Message=result.Message}); 
     }
 
     [HttpPost]
     [Route("InsertMessage/GroupChat")]
     public async Task<ActionResult> InsertMessage(InsertGroupMessageDto message)
-    {
-        if(message.UserId == null){
-            return BadRequest("user Id is required");
-        }
-
-        if(message.ChatId == null){
-            return BadRequest("chatId is required");
-        }
-        
-       var result =  await _messagesManager.InsertGroupMessage(message);
-
-        if(result.StatusCode == 400)
+    {    
+        if(!ModelState.IsValid)
         {
-            return BadRequest($"{result.Message}");
+            return BadRequest(ModelState);
         }
+               
+        var result =  await _messagesManager.InsertGroupMessage(message);
 
-        if(result.StatusCode == 200)
+         if(!result.Success)
         {
-            return Ok($"{result.Message}");
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }        
 
-            return BadRequest($"{result.Message}");
+        return Ok(new {Success=result.Success,Message=result.Message});
     }
 
     [HttpPost]
     [Route("Open/IndividualChat")]
     public async Task<ActionResult> OpenIndividualChat(string userId,string chatId)
     {
-        if(userId== null){
-            return BadRequest("user Id is required");
-        }
-
-        if(chatId == null){
-            return BadRequest("chatId is required");
-        }
-
-       var result = await _messagesManager.OpenIndividualChat(userId,chatId);
-
-        
-        if(result.StatusCode == 400)
+       if(!ModelState.IsValid)
         {
-            return BadRequest($"{result.Message}");
+            return BadRequest(ModelState);
         }
 
-        if(result.StatusCode == 200)
+        var result = await _messagesManager.OpenIndividualChat(userId,chatId);
+                
+         if(!result.Success)
         {
-            return BadRequest($"{result.Message}");
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }       
 
-            return BadRequest($"{result.Message}");
+        return Ok(new {Success=result.Success,Message=result.Message});
 
     }
 
@@ -157,23 +125,16 @@ public class MessagesController : ControllerBase
 
         if(chatId == null){
             return BadRequest("chatId is required");
-        }
-
-       var result = await _messagesManager.OpenGroupChat(userId,chatId);
-
+        }    
         
-        if(result.StatusCode == 400)
+        var result = await _messagesManager.OpenGroupChat(userId,chatId);
+                
+         if(!result.Success)
         {
-            return BadRequest($"{result.Message}");
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }        
 
-        if(result.StatusCode == 200)
-        {
-            return Ok($"{result.Message}");
-        }
-
-            return BadRequest($"{result.Message}");
-
+        return Ok(new {Success=result.Success,Message=result.Message});
     }
 
     [HttpPost]
@@ -187,25 +148,15 @@ public class MessagesController : ControllerBase
         if(chatId == null){
             return BadRequest("chatId is required");
         }
+
+        var result = await _messagesManager.ChangeIndividualChatMessageContent(userId,chatId,messageId,newContent);
                              
-        try
+         if(!result.Success)
         {
-           var result = await _messagesManager.ChangeIndividualChatMessageContent(userId,chatId,messageId,newContent);
-            if(result)  return Ok();
-            return BadRequest(new { StatusCode = 400, Message = "An unexpected error occurred." });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { StatusCode = 400, Message = ex.Message });
-        }
-         catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { StatusCode = 404, Message = ex.Message });
-        }
-         catch (Exception ex)
-        {       
-            return StatusCode(500, new { StatusCode = 500, Message = "An unexpected error occurred." });
-        }
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }            
+
+        return Ok(new {Success=result.Success,Message=result.Message});
     }    
 }
 

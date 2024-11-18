@@ -24,28 +24,36 @@ public class MessagesManager : IMessagesManager
         this._mapper = mapper;
         this._logger = _logger;
     }
-    public async Task<CustomReturn> InsertIndividualMessage(InsertIndividualMessageDto message)
+     
+    public async Task<Result<bool>> InsertIndividualMessage(InsertIndividualMessageDto message)
     {                   
+        var result = new Result<bool>();
+
         var user =await _context.User.Where(u=>u.Id == message.UserId ).FirstOrDefaultAsync();
 
         if(user == null)
         {
-            throw new ValidationException("there is no user with this id");
+            result.Success=false;
+            result.Message="there is no user with this Id";            
+            return result;
         }
-
 
         var chat = await _context.IndividualChat.Include(ic=>ic.IndividualChatUser).Where(c=>c.Id== message.ChatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            throw new ValidationException("there is no chat with this id");
+            result.Success=false;
+            result.Message="there is no chat with this Id";            
+            return result;
         }
                   
         var isMemeberOfTheChat = await _context.IndividualChatUser.Where(ic=>ic.UserId == message.UserId && ic.IndividualChatId == chat.Id).FirstOrDefaultAsync();
 
         if(isMemeberOfTheChat == null)
         {
-            throw new ValidationException("the given user is not in the given chat");
+            result.Success=false;
+            result.Message="there is no user with this Id in this chat";            
+            return result;
         }
 
         var messageToBeInserted = _mapper.Map<IndividualMessage>(message);
@@ -56,39 +64,51 @@ public class MessagesManager : IMessagesManager
         try
         {
             _context.IndividualMessages.Add(messageToBeInserted);
+            _logger.LogInformation($"{messageToBeInserted}");
 
-            var result = await _context.SaveChangesAsync();
+             await _context.SaveChangesAsync();          
 
         }catch(Exception ex)
         {
-            throw new InternalServerErrorException($"{ex.Message}");
+            result.Success=false;           
+            _logger.LogInformation($"{ex}"); 
+            result.Message=$"Internal server";
+            
+            return result;
         }
-               
-        return new CustomReturn{StatusCode=500,Message="failed to add message"};
-          
-    }
 
-     public async Task<CustomReturn> InsertGroupMessage(InsertGroupMessageDto message)
+            result.Message="message added to the chat";                        
+            return result;                    
+    }
+  
+     public async Task<Result<bool>> InsertGroupMessage(InsertGroupMessageDto message)
     {        
+        var result = new Result<bool>();
         var user =await _context.User.Where(u=>u.Id == message.UserId ).FirstOrDefaultAsync();
 
         if(user == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no user with this id"};
+            result.Success=false;
+            result.Message="there is no user with this Id";            
+            return result;
         }
 
         var chat = await _context.Chat.Include(c=>c.Members).Where(c=>c.Id== message.ChatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no chat with this id"};
+            result.Success=false;
+            result.Message="there is no user with this Id";            
+            return result;
         }
           
         var isMemeberOfTheChat =  chat.Members.Exists(cu=>cu.UserId==message.UserId);
 
         if(!isMemeberOfTheChat)
         {
-            return new CustomReturn{StatusCode=400,Message="user is not a member of this chat"};
+            result.Success=false;
+            result.Message="there is no user with this Id in this chat";            
+            return result;
         }
 
         var messageToBeInserted = _mapper.Map<GroupMessage>(message);
@@ -96,107 +116,161 @@ public class MessagesManager : IMessagesManager
         messageToBeInserted.User= user;
         messageToBeInserted.GroupChat=chat;
 
-         _context.GroupMessages.Add(messageToBeInserted);
-
-        var result = await _context.SaveChangesAsync();
-
-        if(result > 0)
+        try
         {
-            return new CustomReturn{StatusCode=200,Message="success"};
+            _context.GroupMessages.Add(messageToBeInserted);
+
+            await _context.SaveChangesAsync();
+
+        }catch(Exception ex)
+        {
+            result.Success=false;
+            _logger.LogInformation($"{ex}");
+            result.Message=$"Internal server  {ex}";      
+            return result;
         }
 
-        return new CustomReturn{StatusCode=500,Message="failed to add message"};
-          
+        result.Message="message added to the chat";               
+        return result;
+                                
     }
 
-    public async Task<CustomReturn> OpenIndividualChat(string userId,string chatId)
+    public async Task<Result<bool>> OpenIndividualChat(string userId,string chatId)
     {
+        var result = new Result<bool>();
+
         var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
 
         if(user == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no user with this id"};
+            result.Success=false;
+            result.Message="there is no user with this id";            
+            return result;
         }
 
-         var chat = await _context.IndividualChat.Include(ic=>ic.IndividualChatUser).Where(c=>c.Id== chatId).FirstOrDefaultAsync();
+        var chat = await _context.IndividualChat.Include(ic=>ic.IndividualChatUser).Where(c=>c.Id== chatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no chat with this id"};
+            result.Success=false;
+            result.Message="there is no chat with this id";            
+            return result;
         }
 
          var isMemeberOfTheChat =  chat.IndividualChatUser.Exists(cu=>cu.UserId==userId);
 
         if(!isMemeberOfTheChat)
         {
-            return new CustomReturn{StatusCode=400,Message="user is not a member of this chat"};
-        }
-               
-            var  result =  await _context.IndividualMessages
-        .Where(m => m.Chat.Id == chatId && m.User.Id != userId && !m.IsRead)
-        .ExecuteUpdateAsync (m => m
-        .SetProperty(msg => msg.IsRead, true)
-        .SetProperty(msg => msg.SeenTime, DateTime.UtcNow));
-                
-        if(result > 0)
-        {
-            return new CustomReturn{StatusCode=200,Message="success"};
+            result.Success=false;
+            result.Message="there is no user with this id in this chat";            
+            return result;
         }
 
-        return new CustomReturn{StatusCode=500,Message="failed to open chat"};
+        try
+        {
+            var  addingResult =  await _context.IndividualMessages
+            .Where(m => m.Chat.Id == chatId && m.User.Id != userId && !m.IsRead)
+            .ExecuteUpdateAsync (m => m
+            .SetProperty(msg => msg.IsRead, true)
+            .SetProperty(msg => msg.SeenTime, DateTime.UtcNow));
+
+            if(addingResult == 0) {
+            result.Success=false;
+            result.Message="there is no message to edit";            
+            return result;
+            }
+         }
+         catch(Exception ex)
+         {
+            result.Success=false;
+            _logger.LogInformation($"{ex}");
+            result.Message=$"Internal server  {ex}";      
+            return result;
+         }      
+                               
+        result.Message="messages now readed by the user";               
+        return result;
     }
 
-    public async Task<CustomReturn> OpenGroupChat(string userId,string chatId)
+    public async Task<Result<bool>> OpenGroupChat(string userId,string chatId)
     {
+        var result = new Result<bool>();
+
         var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
 
         if(user == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no user with this id"};
+            result.Success=false;
+            result.Message="there is no user with this id";            
+            return result;
         }
 
 
-        var chat = await _context.Chat.Where(c=>c.Id== chatId).FirstOrDefaultAsync();
+        var chat = await _context.Chat.Include(c=>c.Members).Where(c=>c.Id== chatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            return new CustomReturn {StatusCode=400,Message ="there is no chat with this id"};
+            result.Success=false;
+            result.Message="there is no chat with this id";            
+            return result;
         }
           
         var isMemeberOfTheChat =  chat.Members.Exists(cu=>cu.UserId==userId);
 
         if(!isMemeberOfTheChat)
         {
-            return new CustomReturn{StatusCode=400,Message="user is not a member of this chat"};
+            result.Success=false;
+            result.Message="there is no user with this id in this chat";            
+            return result;
         }
 
-        var messages = await _context.GroupMessages.Where(m =>m.GroupChat.Id == chatId && !m.IsRead).ToListAsync();
-        var groubMembersCount = chat.Members.Count();
-
-        foreach (var msg in messages)
+        try
         {
-            msg.SeenBy.Add(new SeenBy 
-            { 
-                SeenTime = DateTime.UtcNow, 
-                SeenWith = user.FirstName, 
-                MessagesId = msg.Id, 
-                Id = user.Id 
-            });
+            var messages = await _context.GroupMessages.Include(gm=>gm.SeenBy).Where(m =>m.GroupChat.Id == chatId && !m.IsRead).ToListAsync();
 
-            if(groubMembersCount == msg.SeenBy.Count())
+            var groubMembersCount = chat.Members.Count();           
+
+            if(messages == null)
             {
-                msg.IsRead = true;
+                result.Success=false;                
+                result.Message=$"all messages already seen";      
+                return result;
             }
-        }                               
 
-        var result = await _context.SaveChangesAsync();
+            foreach (var msg in messages)
+            {                                
+                var userSeenMe = msg.SeenBy.Where(s=>s.MessagesId==msg.Id && s.Id==userId);
+               
+                _logger.LogInformation($"{msg.Content}");
+            
+                if(groubMembersCount == msg.SeenBy.Count())
+                {                    
+                    msg.IsRead = true;
+                }
 
-        if(result > 0)
-        {
-            return new CustomReturn{StatusCode=200,Message="success"};
+                if(userSeenMe != null) continue;
+
+                msg.SeenBy.Add(new SeenBy 
+                { 
+                    SeenTime = DateTime.UtcNow, 
+                    SeenWith = user.FirstName, 
+                    MessagesId = msg.Id, 
+                    Id = user.Id 
+                });                               
+            }                               
+
+            await _context.SaveChangesAsync();
+
         }
-
-        return new CustomReturn{StatusCode=500,Message="failed to add message"};
+        catch(Exception ex)
+        {
+            result.Success=false;
+            _logger.LogInformation($"{ex}");
+            result.Message=$"Internal server  {ex}";      
+            return result;
+        }
+        result.Message="messages now read";
+        return result;
     }
 
     public async Task<Result<GetIndividualMessagesDto>> IndividualChatMessages(string userId,string chatId)
@@ -208,7 +282,7 @@ public class MessagesManager : IMessagesManager
         if(user == null)
         {  
             result.Success=false;
-            result.ErrorMessage="there is no user with this Id";
+            result.Message=" there is no user with this Id ";
             return result;  
         }
 
@@ -217,7 +291,7 @@ public class MessagesManager : IMessagesManager
         if(chat == null)
         {
             result.Success=false;
-            result.ErrorMessage="there is no chat with this Id";
+            result.Message="there is no chat with this Id";
             return result; 
         }
           
@@ -226,7 +300,7 @@ public class MessagesManager : IMessagesManager
         if(isMemeberOfTheChat == null)
         {
             result.Success=false;
-            result.ErrorMessage="there is no user with this Id in the chat";
+            result.Message="there is no user with this Id in the chat";
             return result;            
         }
 
@@ -245,18 +319,18 @@ public class MessagesManager : IMessagesManager
                     SenderName = m.User.FirstName
                 })
                 .ToList();
-
-            result.StatusCode=200;    
+               
             result.Data=messages;    
           
         }
         catch (Exception ex)
         {           
-            result.ErrorMessage="Internal Error occured";
-            result.Success=false;
-            result.StatusCode = 500;
+            result.Message=$"Internal error occured ";
+            _logger.LogInformation($"{ex}");
+            result.Success=false;            
         }
-    
+
+        result.Message="getting messsages done";
         return result;
     }
 
@@ -269,8 +343,7 @@ public class MessagesManager : IMessagesManager
         if(user == null)
         {  
             result.Success=false;
-            result.ErrorMessage="there is no user with this Id";
-            result.StatusCode=400;
+            result.Message="there is no user with this Id";            
             return result;  
         }      
 
@@ -279,8 +352,7 @@ public class MessagesManager : IMessagesManager
         if(chat == null)
         {
             result.Success=false;
-            result.ErrorMessage="there is no chat with this Id";
-            result.StatusCode=400;
+            result.Message="there is no chat with this Id";            
             return result; 
         }
           
@@ -288,15 +360,14 @@ public class MessagesManager : IMessagesManager
 
         if(!isMemeberOfTheChat)
         {
-            result.Success=false;
-            result.StatusCode=400;
-            result.ErrorMessage="there is no chat with this Id in this chat";
+            result.Success=false;            
+            result.Message="there is no chat with this Id in this chat";
             return result;
         }
         
         var friends = user.Friends.Select(f=>f.Id).ToList();
 
-         List<GetGroupMessagesDto> messages ;
+        List<GetGroupMessagesDto> messages ;
        
        try
        {
@@ -308,95 +379,130 @@ public class MessagesManager : IMessagesManager
                                                         SenderName = m.User.FirstName,
                                                         SeenBy= m.SeenBy.Select( m=> new Seen{SeenTime= m.SeenTime ,SeenWith=m.SeenWith ?? ""}).ToList()
                                                     })
-                                                    .ToList();
-            result.Data=messages;
-            result.StatusCode=200;
-
+                                                    .ToList();            
         }catch(Exception ex)
         {
             result.Success=false;
-            result.ErrorMessage="there is no chat with this Id";
-            result.StatusCode=500;
+            _logger.LogInformation($"{ex}");
+            result.Message=$"Internal server error";            
             return result;
         }
-                    
-          return  result;
+
+        result.Data=messages;
+        result.Message="getting messages done";                 
+        return  result;
                                                                                                                                                                                                                                                                        
     }
-
-    public async Task<bool> AddGroupMember(string userId,string chatId)
+    
+    public async Task<Result<bool>> AddGroupMember(string userId,string chatId)
     {
+        var result = new Result<bool>();
+
         var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
 
         if(user == null)
         {            
-            throw new ArgumentException("There is no user with this ID", nameof(userId));
+            result.Success=false;            
+            result.Message="there is no user with this Id";
+            return result;
         }       
 
         var chat = await _context.Chat.Where(c=>c.Id== chatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            throw new ArgumentException("There is no chat with this ID", nameof(chatId));
+            result.Success=false;            
+            result.Message="there is no chat with this Id ";
+            return result;
         }
 
         var isMemeberOfTheChat =  chat.Members.Exists(cu=>cu.UserId==userId);
 
         if(isMemeberOfTheChat)
         {
-            throw new ArgumentException("user already member of the group", nameof(userId));
+            result.Success=false;            
+            result.Message="there is no chat with this Id in this chat";
+            return result;
         }
 
-        chat.Members.Add(new GroupChatUser{GroupChatId = chat.Id , UserId= userId});
+        try
+        {
+            chat.Members.Add(new GroupChatUser{GroupChatId = chat.Id , UserId= userId});
 
-        var result = await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
+        }
+        catch(Exception ex)
+        {
+            result.Success=false;            
+            result.Message=$"Internal server error ";
+            _logger.LogInformation($"{ex}");
+            return result;
+        }    
 
-       if(result == 0) throw new ArgumentException("failed to add to group", nameof(userId));
-       
-       return result > 0;
+        result.Message="memeber added";                           
+        return result;
     }
 
-      public async Task<bool> ChangeIndividualChatMessageContent(string userId,string chatId,string messageId,string newContent)
+    public async Task<Result<bool>> ChangeIndividualChatMessageContent(string userId,string chatId,string messageId,string newContent)
     {
+        var result = new Result<bool>();
+
         var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
 
         if(user == null)
         {            
-            throw new ArgumentException("There is no user with this ID", nameof(userId));
+            result.Success=false;            
+            result.Message="there is no user with this id";
+            return result;
         }       
 
         var chat = await _context.IndividualChat.Where(c=>c.Id== chatId).FirstOrDefaultAsync();
 
         if(chat == null)
         {
-            throw new ArgumentException("There is no chat with this ID", nameof(chatId));
+            result.Success=false;            
+            result.Message="there is no chat with this id";
+            return result;
         }
 
          var isMemeberOfTheChat =  chat.IndividualChatUser.Where(ic=> ic.UserId == userId);
 
         if(isMemeberOfTheChat ==null)
         {
-            throw new ArgumentException("user not in this chat", nameof(userId));
+            result.Success=false;            
+            result.Message="there is no user with this id in this chat";
+            return result;
         }
 
          var message =await _context.IndividualMessages.Where(im=> im.Id == messageId && im.User.Id==userId).FirstOrDefaultAsync(); 
 
          if(message == null)
          {
-            throw new ArgumentException("cant find this message");
+            result.Success=false;            
+            result.Message="cant find this message";
+            return result;
          }
-
-         var allowedTime = message.SentAt.AddMinutes(5);
-
-         if(DateTime.UtcNow <= allowedTime)
+         
+         try
          {
-            message.Content = newContent;
-            var result = await _context.SaveChangesAsync();
-            if(result == 0) throw new ArgumentException("failed to add to group", nameof(userId));
-            return result > 0;
-         } 
+            var allowedTime = message.SentAt.AddMinutes(5);
 
-       throw new ArgumentException("cant edit content");
+            if(DateTime.UtcNow <= allowedTime)
+            {
+                message.Content = newContent;                           
+            }
+            await _context.SaveChangesAsync();
+         }
+         catch(Exception ex)
+         {
+            result.Success=false;            
+            result.Message=$"Internal server error ";
+            _logger.LogInformation($"{ex}");
+            return result;
+         }
+       
+        result.Message="content changed";              
+        return result;
     }
 
 } 

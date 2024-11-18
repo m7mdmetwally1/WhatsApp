@@ -19,6 +19,7 @@ using System.Formats.Asn1;
 using Microsoft.EntityFrameworkCore;
 using Application.ChatsDto;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 
 
@@ -29,23 +30,21 @@ public class AuthManager : IAuthMangaer
   private readonly IImageKitService _imageKitService;
   private readonly IConfiguration _configuration;
   private readonly UserManager<ApiUser> _userManager;
-  private readonly IMapper _mapper;
-
+  private  readonly IMapper _mapper;
   private readonly SignInManager<ApiUser> _signInManager;
   private readonly IEmailSender _emailSender;
   private readonly ISmsSender _smsSender;
   private readonly ILogger<AuthManager> _logger;
   private readonly ApplicationDbContext _context;
 
-  private ApiUser _user;
-
+  private ApiUser? _user;
 
   public AuthManager(IImageKitService imageKitService,IConfiguration configuration,UserManager<ApiUser> userManager,IMapper mapper,SignInManager<ApiUser> signInManager,IEmailSender emailSender,ISmsSender smsSender,ILogger<AuthManager> logger,ApplicationDbContext context )
   {
     this._imageKitService = imageKitService;
     this._configuration = configuration;
     this._userManager = userManager;
-    this._mapper = mapper;
+    this._mapper = _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 
     this._signInManager = signInManager;
     this._emailSender = emailSender;
@@ -54,30 +53,24 @@ public class AuthManager : IAuthMangaer
     this._context = context;
   }
 
-
   public async Task<IEnumerable<IdentityError>> Register(ApiUserDto userDto)
   {
-
-    if (userDto == null)
-    {
-        return new List<IdentityError> { new IdentityError { Description = "User data is required." } };
-    }
-
     _user = _mapper.Map<ApiUser>(userDto);
-    _user.UserName = userDto.PhoneNumber;
-
+      _user.UserName = userDto.PhoneNumber;
+    
     var result = await _userManager.CreateAsync(_user,userDto.Password);
 
     if(result.Succeeded){
         var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
 
         // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
-
+      
         var chatUser = new User
         {      
             Id = _user.Id,
             FirstName=_user.FirstName,
-            LastName=_user.LastName
+            LastName=_user.LastName??"",
+            Number=_user.PhoneNumber ??"000"
         };
           
         _context.User.Add(chatUser);
@@ -86,69 +79,59 @@ public class AuthManager : IAuthMangaer
 
     return result.Errors;
   }
-
     
   public async Task<IEnumerable<IdentityError>> ConfirmEmail(string userId, string token)
   {
     var  user = await _userManager.FindByIdAsync(userId);
-     
-    _logger.LogInformation($"{token} token recieved");
              
     if(user == null){
-      return null;
+      var error = new IdentityError
+        {
+            Code = "UserNotFound",
+            Description = "There is no user with the specified ID."
+        };
+      return new List<IdentityError> { error };
     }
                 
     token = token.Replace(" ", "+");
 
-    var result = await _userManager.ConfirmEmailAsync(user, token);
-             
-    _logger.LogInformation($"{result} result of query");
+    var result = await _userManager.ConfirmEmailAsync(user, token);             
 
     if(!result.Succeeded){
-
-
-
       return result.Errors;
     }
 
-
-    _logger.LogInformation($"Email confirmed successfully for user with ID {userId}");
-
-    return   result.Errors;
-            
+    return   result.Errors;            
   }
-
 
   public async Task<AuthResponseDto> Login(LoginDto login)
   {
-
     if(login == null ){
-      return null;
+      return new AuthResponseDto
+      {
+          ErrorMessage= "Invalid data"
+      };
     }
       
-    var user = await _userManager.FindByNameAsync(login.PhoneNumber);
+    var user = await _userManager.FindByNameAsync(login.PhoneNumber);            
 
-        
-    _logger.LogInformation($"{user.UserName}");
-
-    if (user == null)
+    if (user == null || user.PhoneNumber ==null)
     {
-      return null;
+      return new AuthResponseDto
+      {
+          ErrorMessage= "Invalid data"
+      };
     }
 
     bool isValidUser = await _userManager.CheckPasswordAsync(user, login.Password);
 
-
-
     if(isValidUser)
-    {
-        
+    {        
       var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
 
       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
 
-      // var token = await GenerateJWTToken(user);
-      var token = await GenerateJWTToken();
+      var token =  GenerateJWTToken();
 
       return new AuthResponseDto
       {
@@ -161,13 +144,15 @@ public class AuthManager : IAuthMangaer
       };
     }
 
-    return null;
-
+      return  new AuthResponseDto
+      {
+        ErrorMessage= "user Not Valid"
+      };
   } 
-
-  private async  Task<string> GenerateJWTToken()
+  private string GenerateJWTToken()
   {
-    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["jwtSettings:Key"]));
+    var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
     var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
@@ -186,7 +171,7 @@ public class AuthManager : IAuthMangaer
 
     var user = await _userManager.FindByNameAsync(phoneNumber);
 
-    if (user == null)
+    if (user == null || user.PhoneNumber == null)
     {
         return false;
     }
@@ -212,6 +197,11 @@ public class AuthManager : IAuthMangaer
 
     var _user = await _userManager.FindByNameAsync(phoneNumber);
 
+    if(_user == null)
+    {
+      return false;
+    }
+
     var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user,phoneNumber);
 
     try{
@@ -219,6 +209,7 @@ public class AuthManager : IAuthMangaer
       return true;
 
     }catch(Exception ex){
+      _logger.LogInformation($"{ex}");
       return false;
     }
 
@@ -228,6 +219,11 @@ public class AuthManager : IAuthMangaer
   {
 
     var _user = await _userManager.FindByNameAsync(checkTwoFactorDto.PhoneNumber);
+
+    if(_user == null)
+    {
+      return false;
+    }
 
     var enabled = await _userManager.GetTwoFactorEnabledAsync(_user);
 
@@ -245,6 +241,11 @@ public class AuthManager : IAuthMangaer
   {
 
     var _user = await _userManager.FindByNameAsync(phoneNumber);
+
+    if(_user == null)
+    {
+      return false;
+    }
 
     var isConfirmed =  await _userManager.IsEmailConfirmedAsync(_user);
 
@@ -278,14 +279,12 @@ public async Task<bool> SendTwoFactorCode(string phoneNumber){
   return true;
 
   }catch(Exception ex){
-
+    _logger.LogInformation($"{ex}");
     return false;
-
   }
 
 }
 
- 
 }
 
 

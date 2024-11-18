@@ -1,9 +1,11 @@
+using Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using Application.ChatsDto;
 using Application.Interfaces;
 using Application.UserDto;
 using infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -27,26 +29,17 @@ public class UserController :ControllerBase
     [HttpPost]
     [Route("add-friend")]
     public async Task<ActionResult> AddFriend(CreateIndividualChatDto chatDto)
-    {
-        var success =await _userManager.AddFriend(chatDto);
-        if(!success){
-            return StatusCode(500,"failed to add friend");
-        }
-        var chat =await _chatManager.GetIndividualChat(chatDto.SenderUserId,chatDto.SecondUserId);
-        
-        if(chat != null ){
-            var chatUpdated = await _chatManager.UpdateChatCustomName(chatDto.SenderUserId,chatDto.CustomName ?? "",chat.Id);            
-            if(chatUpdated) return Ok("chat already exist and your friend custom name updated");
-            return Ok("chat already exist but your friend custom name doesnt added");
-        }
-        
-        var chatCreated = await _chatManager.CreateChat(chatDto);
-        if(!chatCreated){
-            var deleteFriend = await _chatManager.DeleteFriend(chatDto);
-            return StatusCode(500,"failed to create chat");
-        }
+    {   
 
-        return Ok();
+        var result =await _userManager.AddFriend(chatDto);
+                
+         if(!result.Success)
+            {
+                return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+            }  
+             
+        return Ok(new {Success=result.Success,Message =result.Message});
+                
     }
 
     [HttpPost]
@@ -57,50 +50,35 @@ public class UserController :ControllerBase
         {
             return BadRequest("the image should be specific for user or Group");
         }
-        
-        if(!string.IsNullOrWhiteSpace(userId)){
-            var user =await _context.User.Where(u=>u.Id == userId).FirstOrDefaultAsync();
-
-            if(user ==null)
-            {
-                return BadRequest("user not exist");
-            }
-
-            if(user.ImageId ==null)
-            {
-                return StatusCode(500,"image already deleted");
-            }
+        if(!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(groupChatId))
+        {
+            return BadRequest("the image should be specific for user or Group");
+        }
+        var result = new Result<bool>();
+            
+        if(!string.IsNullOrWhiteSpace(userId)){           
            
-            var checkDeletion = await  _userManager.DeleteUserImageKitImage(user.ImageId,userId);
-
-            if(checkDeletion){
-                return Ok(" user image deleted");
-            }
-            if(!checkDeletion){
-                return StatusCode(500,"failed to delete image please try again");
-            }
+             result = await  _userManager.DeleteUserImageKitImage(userId);
+           
+             if(!result.Success)
+            {
+                return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+            }                          
         }
             
         if(!string.IsNullOrWhiteSpace(groupChatId)){
-            var groupChat = await _context.Chat.Where(c=>c.Id == groupChatId).FirstOrDefaultAsync();
 
-            if(groupChat ==null)
+            result = await  _userManager.DeleteGroupImageKitImage(groupChatId);
+
+            if(!result.Success)
             {
-                return BadRequest("user not exist");
-            }
+                return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+            }          
+             
+        } 
 
-            if(groupChat.ImageId ==null)
-            {
-                return StatusCode(500,"image already deleted");
-            }
+        return Ok(new {Success=result.Success,Message=result.Message});          
 
-            var checkDeletion = await  _chatManager.DeleteGroupImageKitImage(groupChat.ImageId,groupChatId); 
-
-            if(checkDeletion){
-                return Ok(" group image deleted");
-            }
-        }
-        return StatusCode(500,"Failed to delete image");
     }
 
     [HttpPost]
@@ -118,34 +96,17 @@ public class UserController :ControllerBase
       
         if(uploadImageDto.ImageUrl == null){
         return BadRequest("imageUrl can not be null");
+        }        ;
+     
+        var result = await  _userManager.UploadImage(uploadImageDto.ImageUrl,uploadImageDto.UserId,uploadImageDto.GroupChatId);
+
+         if(!result.Success)
+        {
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
         }
-       
-        var imageKitResponse = await  _userManager.UploadImage(uploadImageDto.ImageUrl);
       
-
-         if(string.IsNullOrWhiteSpace(imageKitResponse.ImageId) || string.IsNullOrWhiteSpace(imageKitResponse.ImageUrl) ){
-            return StatusCode(500, "Failed to upload the image."); 
-         }
-        
-        if(!string.IsNullOrWhiteSpace(uploadImageDto.UserId)){
-            
-            var addImageUrlToUser = await _chatManager.AddUserImageUrlToDatabase(imageKitResponse.ImageUrl,imageKitResponse.ImageId,uploadImageDto.UserId);
-        if(!addImageUrlToUser)
-            {
-            return StatusCode(500,"image uploaded but you cant access it , please try again later");
-            }
-            return Ok(imageKitResponse); 
-        }
-
-        if(!string.IsNullOrWhiteSpace(uploadImageDto.GroupChatId)){
-            var addImageUrlToGroupChat = await _chatManager.AddGroupImageUrlToDatabase(imageKitResponse.ImageUrl,imageKitResponse.ImageId,uploadImageDto.GroupChatId);       
-            if(addImageUrlToGroupChat){
-            return Ok(addImageUrlToGroupChat);
-            }
-            return StatusCode(500,"failed to add the image url to databases");
-        }
-
-           return StatusCode(500,"please try again");
+             
+        return Ok(new {Success=true,Message=result.Message});
     } 
 
 }

@@ -2,5 +2,5 @@ namespace Application.ChatsDto;
 
 public class GetChatResponse 
 {
-    public string Id { get; set; }
+    public required string Id { get; set; }
 }

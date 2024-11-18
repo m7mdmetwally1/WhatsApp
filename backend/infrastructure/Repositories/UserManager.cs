@@ -1,4 +1,4 @@
-
+using Application.Common;
 using System.Security.Policy;
 using Application.Interfaces;
 using Application.UserDto;
@@ -19,87 +19,226 @@ using System.Formats.Asn1;
 using Microsoft.EntityFrameworkCore;
 using Application.ChatsDto;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Org.BouncyCastle.Bcpg;
 
 namespace infrastructure.Repositories;
-
 public class UserManager : IUserManager
 {
-  private readonly IImageKitService _imageKitService;
-  private readonly IConfiguration _configuration;
-  private readonly IMapper _mapper;
-  private readonly ILogger<AuthManager> _logger;
-  private readonly ApplicationDbContext _context;
+    private readonly IImageKitService _imageKitService;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthManager> _logger;
+    private readonly ApplicationDbContext _context;
+    private readonly IChatManager _chatManager;
 
-  public UserManager(IImageKitService imageKitService,IConfiguration configuration,IMapper mapper,ILogger<AuthManager> logger,ApplicationDbContext context )
+    public UserManager(IImageKitService imageKitService,IConfiguration configuration,ILogger<AuthManager> logger,ApplicationDbContext context,IChatManager chatManager )
   {
     this._imageKitService = imageKitService;
     this._configuration = configuration;
     this._logger = logger;
     this._context = context;
+    this._chatManager = chatManager;
   }
 
-  public async Task<ImageKitResponse> UploadImage(IFormFile imageUrl)
+  public async Task<Result<ImageKitResponse>> UploadImage(IFormFile imageUrl,string? userId, string? groupChatId)
   {
+     var result = new Result<ImageKitResponse>();
+     
     if(imageUrl == null){
-      return null;
+      result.Success=false;
+      result.Message="no image url";      
+      return result;
     }
-      var imageKitResponse =  await _imageKitService.UploadImage(imageUrl);
-      if(imageKitResponse == null){
-        return null;
+
+    ImageKitResponse imageKitResponse;
+
+     try
+     {     
+      
+      imageKitResponse  =  await _imageKitService.UploadImage(imageUrl);
+
+       if(!imageKitResponse.Success || imageKitResponse.ImageId==null || imageKitResponse.ImageUrl == null)
+       {
+        result.Success=false;
+        result.Message=$"{imageKitResponse.Message}";
+        return result;
+       } 
+      
+      if(userId != null)
+      {
+        var addingResult = await _chatManager.AddUserImageUrlToDatabase(imageKitResponse.ImageUrl,imageKitResponse.ImageId,userId);      
+        if(!addingResult.Success){
+           result.Success=false;
+           result.Message="failed to add image url to database" ;
+           return result;
+        } 
       }
-      return imageKitResponse;
+              
+      if(groupChatId != null){
+       var addingResult =  await _chatManager.AddGroupImageUrlToDatabase(imageKitResponse.ImageUrl,imageKitResponse.ImageId,groupChatId);
+       if(!addingResult.Success){
+           result.Success=false;
+           result.Message="failed to add image url to database" ;
+           return result;
+       }
+      }
+
+      }
+      catch(Exception ex)
+      {      
+       result.Success=false;
+      _logger.LogInformation($"{ex}");
+       result.Message=$"Internal server error";      
+       return result;
+      }
+
+       result.SingleData=imageKitResponse;
+       result.Message=$"image uploaded successfully";
+       return result;
   }
 
-  public async Task<bool> DeleteUserImageKitImage(string imageId,string userId){
-    
-    var user = await _context.User.Where(u=>u.Id == userId).FirstOrDefaultAsync(); 
-
-    if(user == null){
-    return false;
-    }
-
-    user.ImageUrl = "";  
-    user.ImageId ="";
-
-    var result = await _context.SaveChangesAsync();
-    
-    if(result == 0 ){
-      return false;
-    }
-
-    var deleteResult = await _imageKitService.DeleteImage(imageId);
-
-    if(!deleteResult){
-      return false;
-    }
-
-    return true;
-  }
-
-  public async Task<bool> AddFriend(CreateIndividualChatDto chatDto)
+  public async Task<Result<bool>> DeleteUserImageKitImage(string userId)
   {
-    
-    var user =await _context.User.Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
-    var friend =await _context.User.Where(u => u.Id == chatDto.SecondUserId).FirstOrDefaultAsync();
+    var result = new Result<bool>();
 
-    if(user == null || friend == null){
-      return false;
-    }
-
-    var isFriendAlready = user.Friends.Any(f => f.Id == friend.Id);
-
-    if (isFriendAlready)
+    try
     {
-        return true;
+       var user = await _context.User.Where(u=>u.Id == userId).FirstOrDefaultAsync(); 
+
+      if(user == null){
+        result.Success=false;
+        result.Message="there is no user with this id";        
+        return result;
+      }
+
+      if(user.ImageId == null){
+        result.Success=false;
+        result.Message="there is no image for this user";        
+        return result;
+      }
+      
+      using var transaction = await _context.Database.BeginTransactionAsync();
+
+      await _imageKitService.DeleteImage(user.ImageId);
+
+      user.ImageUrl = "";  
+      user.ImageId ="";
+
+      await _context.SaveChangesAsync();
+      await transaction.CommitAsync();
+
+    }catch(Exception ex)
+    {
+      result.Success=false;
+      _logger.LogInformation($"{ex}");
+      result.Message=$"Internal server error";      
+      return result;
     }
-  
-    user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??""});
+      result.Message=$"image deleted successfully";
+      return result;    
+  }
+  public async Task<Result<bool>> AddFriend(CreateIndividualChatDto chatDto)
+  {
+    var result = new Result<bool>();
 
-    var result =await  _context.SaveChangesAsync();
+    try
+    {
+      var user =await _context.User.Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
+      var friend =await _context.User.Where(u => u.Id == chatDto.SecondUserId).FirstOrDefaultAsync();
 
-    return result > 0;
+      if(user == null || friend == null){
+        result.Success=false;
+        result.Message="there is no user with this id";        
+        return result;
+      }
+
+      var isFriendAlready = user.Friends.Any(f => f.Id == friend.Id);
+
+      if (isFriendAlready)
+      {
+        result.Success=false;
+        result.Message="there is  user with this id in the chat";        
+        return result;
+      }
+    
+      user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??""});
+
+      var chatResult =await _chatManager.GetIndividualChat(chatDto.SenderUserId,chatDto.SecondUserId);
+
+      if(chatResult != null && chatResult.SingleData != null ){
+          var chatUpdated = await _chatManager.UpdateChatCustomName(chatDto.SenderUserId,chatDto.CustomName ?? "",chatResult.SingleData.Id);            
+          if(chatUpdated != null){
+            result.Success=false;
+            result.Message="chat already exist and your friend custom name updated";            
+            return result;
+          }
+          
+          result.Success=false;
+          result.Message="chat already exist but your friend custom name doesnt added";          
+          return result;          
+      }
+
+      var chatCreated = await _chatManager.CreateChat(chatDto);
+      if(!chatCreated.Success)
+      {
+        result.Success=false;
+        result.Message="cant create chat ,please try again";            
+        return result;
+      }
+
+      await  _context.SaveChangesAsync();
+    }
+    catch(Exception ex)
+    {
+      result.Success=false;
+      _logger.LogInformation($"{ex}");
+      result.Message=$"Internal server error";      
+      return result;
+    }
+
+    result.Message=$"you are now friends";
+    return result;
   }
 
+   public async Task<Result<bool>> DeleteGroupImageKitImage(string groupId)
+  {
+    var result = new Result<bool>();
+
+    try
+    {
+       var group = await _context.Chat.Where(c=>c.Id == groupId).FirstOrDefaultAsync(); 
+
+      if(group == null){
+        result.Success=false;
+        result.Message="there is no group with this id";        
+        return result;
+      }
+
+      if(group.ImageId == null){
+        result.Success=false;
+        result.Message="there is no image for this group";        
+        return result;
+      }
+      
+      using var transaction = await _context.Database.BeginTransactionAsync();
+
+      await _imageKitService.DeleteImage(group.ImageId);
+
+      group.ImageUrl = "";  
+      group.ImageId ="";
+
+      await _context.SaveChangesAsync();
+      await transaction.CommitAsync();
+
+    }catch(Exception ex)
+    {
+      result.Success=false;
+      _logger.LogInformation($"{ex}");
+      result.Message=$"Internal server error";      
+      return result;
+    }
+      result.Message=$"image deleted successfully";
+      return result;    
+  }
  
 }
 
