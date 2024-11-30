@@ -55,18 +55,19 @@ public class MessagesController : ControllerBase
 
         return Ok(new {Success=result.Success,Data=result.Data});
     }
-
+    
     [HttpPost]
     [Route("InsertMessage/IndividualChat")]
-    public async Task<ActionResult> InsertMessage(InsertIndividualMessageDto message)
+    public async Task<ActionResult> InsertMessage([FromBody] InsertIndividualMessageDto message)
     {
+        _logger.LogInformation($"{message.UserId} before inter");
        
         if(!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-       var result =  await _messagesManager.InsertIndividualMessage(message);
+       var result =  await _messagesManager.InsertIndividualMessage(message);       
 
         if(!result.Success)
         {

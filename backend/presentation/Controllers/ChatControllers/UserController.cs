@@ -32,7 +32,7 @@ public class UserController :ControllerBase
     {   
 
         var result =await _userManager.AddFriend(chatDto);
-                
+        _logger.LogInformation($"{chatDto}");
          if(!result.Success)
             {
                 return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
@@ -109,4 +109,22 @@ public class UserController :ControllerBase
         return Ok(new {Success=true,Message=result.Message});
     } 
 
+    [HttpPost]
+    [Route("my-friends")]
+    public async Task<ActionResult> MyFriends(string userId)
+    {
+        if(userId== null) return BadRequest("no userId sent");
+
+        var result = await _userManager.MyFriends(userId);
+
+        if(!result.Success)
+        {
+            return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
+        }
+
+        return Ok(new {Success=true,Message=result.Message,Data=result.Data});
+        
+    }
+
 }
+

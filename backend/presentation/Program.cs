@@ -66,6 +66,8 @@ options.User.AllowedUserNameCharacters =
 options.User.RequireUniqueEmail = false;
 });
 
+
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,17 +77,16 @@ builder.Services.AddAuthentication(options =>
     {
         o.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = builder.Configuration["jwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["jwtSettings:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwtSettings:Key"] ?? string.Empty)),
 
             ValidateIssuer = true,
             ValidateAudience = true,
-            ValidateLifetime = false,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true
         };
     });
-
 
 builder.Services.AddAuthorization();
 

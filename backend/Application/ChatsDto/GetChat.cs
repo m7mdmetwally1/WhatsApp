@@ -10,6 +10,8 @@ public class GetChat
     public DateTime? SentTime { get; set; }
     public int? NumberOfUnSeenMessages { get; set; }
     public string? Number { get; set; }
+    public required string ChatId { get; set; }
+    public required bool ChatType { get; set; }
 }
 
 

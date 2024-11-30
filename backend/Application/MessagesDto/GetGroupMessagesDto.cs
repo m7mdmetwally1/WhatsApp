@@ -7,7 +7,7 @@ public class GetGroupMessagesDto
     public required string Content { get; set; }
     public required bool IsRead { get; set; }
     public  DateTime? SentAt { get; set; }
-    public required string SenderName { get; set; }
+    public required string SenderId { get; set; }
     public List<Seen>? SeenBy { get; set; } 
 }
 

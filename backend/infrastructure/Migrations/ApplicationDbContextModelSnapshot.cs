@@ -109,6 +109,9 @@ namespace infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -330,13 +333,13 @@ namespace infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "1a3bd546-3999-4642-b765-a170aa4a8215",
+                            Id = "3edfc88a-57c0-411e-aa47-bb194247c8f1",
                             Name = "Adminstrator",
                             NormalizedName = "ADMINSTRATOR"
                         },
                         new
                         {
-                            Id = "1ad7c2c9-7819-49b4-9f5e-a85f2c038622",
+                            Id = "39a05232-11c4-4763-bcaf-598453a2bfcd",
                             Name = "User",
                             NormalizedName = "USER"
                         });

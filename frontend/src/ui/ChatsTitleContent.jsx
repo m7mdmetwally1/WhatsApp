@@ -2,16 +2,23 @@ import { MdOutlineAddBox } from "react-icons/md";
 import IndividualChatTitleContent from "./IndividualChatTitleContent";
 import { useQuery } from "./../context/SearchQuery";
 import { useChats } from "./../features/chats/useChats";
+import { useLoginUser } from "../features/user/useUser";
 
 function ChatsTitleContent() {
   const { query } = useQuery();
 
   let { data, isLoading, error } = useChats();
 
-  console.log(data?.data);
-
   let finalData = data?.data;
-  let sortedDataDesc = finalData?.sort(
+
+  let filteredData = finalData?.filter((item) => {
+    if (!query && !item.customName) {
+      return item.number;
+    }
+    return item.customName?.toLowerCase().includes(query?.toLowerCase());
+  });
+
+  let sortedDataDesc = filteredData?.sort(
     (a, b) => new Date(b.sentTime) - new Date(a.sentTime)
   );
 

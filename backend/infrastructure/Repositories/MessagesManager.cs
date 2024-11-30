@@ -32,7 +32,7 @@ public class MessagesManager : IMessagesManager
         var user =await _context.User.Where(u=>u.Id == message.UserId ).FirstOrDefaultAsync();
 
         if(user == null)
-        {
+        {            
             result.Success=false;
             result.Message="there is no user with this Id";            
             return result;
@@ -63,8 +63,7 @@ public class MessagesManager : IMessagesManager
         
         try
         {
-            _context.IndividualMessages.Add(messageToBeInserted);
-            _logger.LogInformation($"{messageToBeInserted}");
+            _context.IndividualMessages.Add(messageToBeInserted);            
 
              await _context.SaveChangesAsync();          
 
@@ -118,7 +117,16 @@ public class MessagesManager : IMessagesManager
 
         try
         {
-            _context.GroupMessages.Add(messageToBeInserted);
+            messageToBeInserted.SeenBy.Add(new SeenBy 
+                { 
+                    SeenTime = DateTime.UtcNow, 
+                    SeenWith = user.Id, 
+                    MessagesId = messageToBeInserted.Id, 
+                    Id = user.Id 
+                });
+
+            _context.GroupMessages.Add(messageToBeInserted); 
+            _logger.LogInformation($"{messageToBeInserted.SeenBy.Count()}");             
 
             await _context.SaveChangesAsync();
 
@@ -175,7 +183,7 @@ public class MessagesManager : IMessagesManager
             .SetProperty(msg => msg.SeenTime, DateTime.UtcNow));
 
             if(addingResult == 0) {
-            result.Success=false;
+            result.Success=true;
             result.Message="there is no message to edit";            
             return result;
             }
@@ -194,6 +202,7 @@ public class MessagesManager : IMessagesManager
 
     public async Task<Result<bool>> OpenGroupChat(string userId,string chatId)
     {
+       
         var result = new Result<bool>();
 
         var user =await _context.User.Where(u=>u.Id == userId ).FirstOrDefaultAsync();
@@ -228,7 +237,8 @@ public class MessagesManager : IMessagesManager
         {
             var messages = await _context.GroupMessages.Include(gm=>gm.SeenBy).Where(m =>m.GroupChat.Id == chatId && !m.IsRead).ToListAsync();
 
-            var groubMembersCount = chat.Members.Count();           
+            var groubMembersCount = chat.Members.Count(); 
+            _logger.LogInformation($"{groubMembersCount}");          
 
             if(messages == null)
             {
@@ -239,24 +249,22 @@ public class MessagesManager : IMessagesManager
 
             foreach (var msg in messages)
             {                                
-                var userSeenMe = msg.SeenBy.Where(s=>s.MessagesId==msg.Id && s.Id==userId);
-               
-                _logger.LogInformation($"{msg.Content}");
-            
-                if(groubMembersCount == msg.SeenBy.Count())
-                {                    
-                    msg.IsRead = true;
-                }
-
-                if(userSeenMe != null) continue;
-
+                var userSeenMe = msg.SeenBy.Where(s=>s.MessagesId==msg.Id && s.Id==userId).FirstOrDefault();                               
+                 if(userSeenMe != null) continue;
+                                            
                 msg.SeenBy.Add(new SeenBy 
                 { 
                     SeenTime = DateTime.UtcNow, 
-                    SeenWith = user.FirstName, 
+                    SeenWith = user.Id, 
                     MessagesId = msg.Id, 
                     Id = user.Id 
-                });                               
+                }); 
+
+                if(groubMembersCount == msg.SeenBy.Count())
+                {                    
+                    msg.IsRead = true;
+                }                         
+
             }                               
 
             await _context.SaveChangesAsync();
@@ -316,7 +324,7 @@ public class MessagesManager : IMessagesManager
                     IsRead = m.IsRead,
                     SentAt = m.SentAt,
                     SeenTime = m.SeenTime,
-                    SenderName = m.User.FirstName
+                    SenderId = m.User.Id
                 })
                 .ToList();
                
@@ -376,7 +384,7 @@ public class MessagesManager : IMessagesManager
                                                         Content=m.Content,
                                                         IsRead=m.IsRead,
                                                         SentAt=m.SentAt,                                                        
-                                                        SenderName = m.User.FirstName,
+                                                        SenderId = m.User.Id,
                                                         SeenBy= m.SeenBy.Select( m=> new Seen{SeenTime= m.SeenTime ,SeenWith=m.SeenWith ?? ""}).ToList()
                                                     })
                                                     .ToList();            

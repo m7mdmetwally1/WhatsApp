@@ -19,23 +19,22 @@ public class AuthenticationController : ControllerBase
         this._logger = logger;
         this._chatManager = chatManager;
     }
-
     
     [HttpPost]
     public async Task<ActionResult> Register(ApiUserDto userDto)
     {
+        
         if(!ModelState.IsValid)
-        {
+        {                       
             return BadRequest("Invalid request");
-        }
+        }        
 
-        var errors = await _authManager.Register(userDto);
-
+        var errors = await _authManager.Register(userDto);        
         if (errors.Any())
         {
             return BadRequest(new { Errors = errors.Select(e => e.Description) });
         }
-        return CreatedAtAction(nameof(Register), new { userDto.PhoneNumber }, "User registered successfully.");
+        return CreatedAtAction(nameof(Register), new { number= userDto.PhoneNumber,message = "User registered successfully."});
     }
 
     [HttpGet]
@@ -65,6 +64,25 @@ public class AuthenticationController : ControllerBase
         if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
         {
             return BadRequest("Invalid login data");
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPost]
+    [Route("VerifyRefreshToken")]
+    public async Task<ActionResult> VerifyRefreshToken(string refreshToken)
+    {
+         if (refreshToken == null)
+        {
+            return BadRequest("no refresh token send");
+        }
+    
+        var result = await _authManager.VerifyRefreshToken(refreshToken);
+
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            return BadRequest("Invalid refresh token ");
         }
 
         return Ok(result);

@@ -7,7 +7,7 @@ namespace Application.Interfaces;
 
 public interface IChatManager
 {
-    Task<Result<bool>> CreateChat(CreateIndividualChatDto chatDto);
+    Task<Result<string>> CreateChat(CreateIndividualChatDto chatDto);
     Task<Result<bool>> CreateGroupChat(CreateGroupChatDto chatDto);
     Task<Result<IndividualChat>> GetIndividualChat(string senderUserIdstring ,string secondUserId);
     Task<Result<bool>> UpdateChatCustomName(string senderUserId,string customName,string chatId);

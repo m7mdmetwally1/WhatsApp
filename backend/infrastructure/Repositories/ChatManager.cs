@@ -30,9 +30,9 @@ public class ChatManager : IChatManager
       this._authMangaer = authMangaer;
       this._logger = logger;
   }
-  public async Task<Result<bool>> CreateChat(CreateIndividualChatDto chatDto)
+  public async Task<Result<string>> CreateChat(CreateIndividualChatDto chatDto)
   {
-      var result = new Result<bool>();
+      var result = new Result<string>();
 
       var newChat = _mapper.Map<IndividualChat>(chatDto);
     
@@ -52,7 +52,8 @@ public class ChatManager : IChatManager
         result.Message=$"Internal server error";        
         return result;
       } 
-         
+  
+      result.SingleData=newChat.Id;  
       result.Message="chat created successfully";
       return result;
   }
@@ -275,7 +276,9 @@ public class ChatManager : IChatManager
       ImageUrl = c.IndividualChatUser.Where(ic=>ic.UserId != userId).Select(ic=>ic.User.ImageUrl ).FirstOrDefault(),
       LastMessage = c.Messages.OrderByDescending(m=>m.SentAt).Select(m=>m.Content).FirstOrDefault(),      
       SentTime = c.Messages.OrderByDescending(m=>m.SentAt).Select(m=>m.SentAt).FirstOrDefault(),
-      NumberOfUnSeenMessages=c.Messages.Where(m=>!m.IsRead && m.User.Id != userId).Count() 
+      NumberOfUnSeenMessages=c.Messages.Where(m=>!m.IsRead && m.User.Id != userId).Count(),
+      ChatId=c.Id, 
+      ChatType=true
       }
       )
       .ToListAsync();
@@ -306,7 +309,7 @@ public class ChatManager : IChatManager
 
     List<GetChat> chats;
 
-    try
+    try 
     {
       var friends =await  _context.User.Where(u=>u.Id == userId).SelectMany(u=>u.Friends.Select(f=>f.Id)).ToListAsync();
       chats =await _context.Chat.Include(c=>c.Members).Where(c=> c.Members.Any(m=>m.UserId == userId)).Select(c=>new GetChat {
@@ -314,7 +317,9 @@ public class ChatManager : IChatManager
       ImageUrl=c.ImageUrl,      
       LastMessage= c.Messages.OrderByDescending(m=>m.SentAt).Select(m=> m.Content).FirstOrDefault(),      
       SentTime = c.Messages.OrderByDescending(m=>m.SentAt).Select(m=>m.SentAt).FirstOrDefault(),
-      NumberOfUnSeenMessages=c.Messages.Where(m=>!m.IsRead).Count()   
+      NumberOfUnSeenMessages=c.Messages.Count(m => m.SeenBy.All(s => s.SeenWith != userId)),    
+      ChatId=c.Id,
+      ChatType=false   
         }).ToListAsync();
       
     }catch(Exception ex)
@@ -331,7 +336,7 @@ public class ChatManager : IChatManager
       result.Message="getting chats success";
       return result;       
   }
-
+  
   public async Task<Result<bool>> AddUserImageUrlToDatabase(string imageUrl,string imageId,string userId)
   {
     var result = new Result<bool>();

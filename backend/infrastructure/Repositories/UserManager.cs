@@ -143,7 +143,7 @@ public class UserManager : IUserManager
     try
     {
       var user =await _context.User.Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
-      var friend =await _context.User.Where(u => u.Id == chatDto.SecondUserId).FirstOrDefaultAsync();
+      var friend =await _context.User.Where(u => u.Number == chatDto.FriendNumber).FirstOrDefaultAsync();
 
       if(user == null || friend == null){
         result.Success=false;
@@ -159,10 +159,10 @@ public class UserManager : IUserManager
         result.Message="there is  user with this id in the chat";        
         return result;
       }
-    
-      user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??""});
 
-      var chatResult =await _chatManager.GetIndividualChat(chatDto.SenderUserId,chatDto.SecondUserId);
+      user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??"",ImageUrl=friend.ImageUrl});
+
+      var chatResult =await _chatManager.GetIndividualChat(chatDto.SenderUserId,friend.Id);
 
       if(chatResult != null && chatResult.SingleData != null ){
           var chatUpdated = await _chatManager.UpdateChatCustomName(chatDto.SenderUserId,chatDto.CustomName ?? "",chatResult.SingleData.Id);            
@@ -176,7 +176,7 @@ public class UserManager : IUserManager
           result.Message="chat already exist but your friend custom name doesnt added";          
           return result;          
       }
-
+      chatDto.SecondUserId=friend.Id;
       var chatCreated = await _chatManager.CreateChat(chatDto);
       if(!chatCreated.Success)
       {
@@ -238,6 +238,30 @@ public class UserManager : IUserManager
     }
       result.Message=$"image deleted successfully";
       return result;    
+  }
+
+  public async Task<Result<GetFriendsDto>> MyFriends(string userId)
+  {
+    var result = new Result<GetFriendsDto>();
+    try
+    {
+      var friends =  await _context.User.Where(u=>u.Id==userId).Select(u=>u.Friends.Select(f=>new GetFriendsDto {ImageUrl=f.ImageUrl??"",FriendId=f.Id,FriendCustomName=f.CustomName??f.FirstName})).FirstOrDefaultAsync();
+      
+      if(friends == null)
+      {
+        result.Message="you have no friends";
+        return result;
+      }
+
+      result.Data=friends;
+
+    }catch(Exception err)
+    {
+      _logger.LogInformation($"{err}");
+      result.Message="internal server error";
+      return result;
+    }
+    return result;
   }
  
 }

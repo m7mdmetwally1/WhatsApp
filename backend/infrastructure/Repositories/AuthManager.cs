@@ -20,8 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Application.ChatsDto;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-
-
+using System.Security.Cryptography;
 
 namespace infrastructure.Repositories;
 
@@ -54,17 +53,18 @@ public class AuthManager : IAuthMangaer
   }
 
   public async Task<IEnumerable<IdentityError>> Register(ApiUserDto userDto)
-  {
+  {    
+    
     _user = _mapper.Map<ApiUser>(userDto);
       _user.UserName = userDto.PhoneNumber;
     
-    var result = await _userManager.CreateAsync(_user,userDto.Password);
-
+    var result = await _userManager.CreateAsync(_user,userDto.Password);     
+    _logger.LogInformation($"{result.Succeeded}"); 
     if(result.Succeeded){
-        var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
+        // var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
 
         // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
-      
+
         var chatUser = new User
         {      
             Id = _user.Id,
@@ -122,7 +122,7 @@ public class AuthManager : IAuthMangaer
           ErrorMessage= "Invalid data"
       };
     }
-
+    
     bool isValidUser = await _userManager.CheckPasswordAsync(user, login.Password);
 
     if(isValidUser)
@@ -132,12 +132,13 @@ public class AuthManager : IAuthMangaer
       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
 
       var token =  GenerateJWTToken();
+      var RefreshToken = GenerateRefreshToken(user.PhoneNumber);
 
       return new AuthResponseDto
       {
           Token = token,
           UserId = user.Id,
-          RefreshToken="",
+          RefreshToken=RefreshToken, 
           PhoneNumber=user.PhoneNumber,
         IsTwoFactorEnabled=isTwoFactorEnabled,
         IsEmailConfirmed=isEmailConfirmed
@@ -156,7 +157,7 @@ public class AuthManager : IAuthMangaer
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
     var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
-                                        _configuration["jwtSettings:Issuer"],
+                                        _configuration["jwtSettings:Audience"],
                                         null,
                                         expires: DateTime.Now.AddMinutes(120),
                                         signingCredentials: credentials);
@@ -264,26 +265,96 @@ public class AuthManager : IAuthMangaer
 
   }
 
-public async Task<bool> SendTwoFactorCode(string phoneNumber){
+  public async Task<bool> SendTwoFactorCode(string phoneNumber)
+  {
 
-  var _user = await _userManager.FindByNameAsync(phoneNumber);
+    var _user = await _userManager.FindByNameAsync(phoneNumber);
 
-  if(_user == null ){
-    return false;
+    if(_user == null ){
+      return false;
+    }
+
+    var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, phoneNumber);
+
+    try{
+    await _smsSender.SendSmsAsync($"{phoneNumber}",$"your verification code is {code}"); 
+    return true;
+
+    }catch(Exception ex){
+      _logger.LogInformation($"{ex}");
+      return false;
+    }
+
   }
 
-  var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, phoneNumber);
+  public string GenerateRefreshToken(string phoneNumber)
+  {
+      var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
+      var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+      var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-  try{
-  await _smsSender.SendSmsAsync($"{phoneNumber}",$"your verification code is {code}"); 
-  return true;
+      var claims = new[]
+      {         
+          new Claim("phoneNumber", phoneNumber),
+          new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) 
+      };
 
-  }catch(Exception ex){
-    _logger.LogInformation($"{ex}");
-    return false;
+      var refreshToken = new JwtSecurityToken(
+          _configuration["jwtSettings:Issuer"],
+          _configuration["jwtSettings:Issuer"],
+          claims,
+          expires: DateTime.Now.AddDays(7),
+          signingCredentials: credentials
+      );
+
+       return new JwtSecurityTokenHandler().WriteToken(refreshToken);
   }
+  
+  public async Task<AuthResponseDto> VerifyRefreshToken(string refreshToken)
+  {
+    _logger.LogInformation($"{refreshToken}");
+    var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
+    var tokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = _configuration["jwtSettings:Issuer"],
+        ValidAudience = _configuration["jwtSettings:Issuer"],
+        ValidateLifetime = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.Zero 
+    };
 
-}
+    var tokenHandler = new JwtSecurityTokenHandler();       
+
+    try
+    {
+      var principal = tokenHandler.ValidateToken(refreshToken, tokenValidationParameters, out var validatedToken);
+    
+      if (validatedToken is not JwtSecurityToken jwtToken ||
+          !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+      {          
+          return new AuthResponseDto{ErrorMessage="Invalid token"};
+      }     
+
+      var phoneNumber = principal.FindFirst("phoneNumber")?.Value;
+      if (string.IsNullOrEmpty(phoneNumber))
+      {
+          return new AuthResponseDto{ErrorMessage="Invalid refresh token , no phone number"};
+      }
+
+      var newToken = GenerateJWTToken();
+      var newRefreshToken = GenerateRefreshToken(phoneNumber);
+      var user = await _userManager.Users
+        .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);        
+
+      return new AuthResponseDto{Token=newToken,RefreshToken=newRefreshToken,UserId=user.Id};
+    }
+    catch (Exception ex)
+    {        
+        return new AuthResponseDto{ErrorMessage="internal server error"};
+    }
+  }
 
 }
 

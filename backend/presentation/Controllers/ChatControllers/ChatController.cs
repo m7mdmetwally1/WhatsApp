@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Domain.Entities;
 using Application.Common;
 using Microsoft.Azure.Amqp.Framing;
+using Microsoft.AspNetCore.Authorization;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -37,8 +38,9 @@ public class ChatController : ControllerBase
         this._authManager = authManager;
         this._logger = logger;
     }
-
+    
     [HttpGet("MyChats")]
+    [Authorize]
     public async Task<ActionResult> GetChats(string userId)
     {
     

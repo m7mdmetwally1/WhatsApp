@@ -8,6 +8,7 @@ public class Friend
     public required string FirstName { get; set; }
     public required string LastName { get; set; } 
     public string? CustomName { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 

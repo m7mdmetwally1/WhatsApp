@@ -15,6 +15,7 @@ public interface IAuthMangaer
      Task<bool> CheckTwoFactor (CheckTwoFactorDto checkTwoFactorDto);
      Task<bool> VerifyEmail (string email,string phoneNumber);
      Task<bool> SendTwoFactorCode (string phoneNumber);
+     Task<AuthResponseDto> VerifyRefreshToken (string refreshToken);
      Task<AuthResponseDto> Login(LoginDto loginDto);
 
     //  Task<string> CreateRefreshToken();

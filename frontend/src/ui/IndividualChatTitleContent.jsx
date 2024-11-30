@@ -2,15 +2,32 @@ import { VscAccount } from "react-icons/vsc";
 import { useNavigate } from "react-router-dom";
 import { UseChatDetailsProvider } from "./../context/selectedChatDetails";
 import { formatTime } from "./../utils/helper";
+import {
+  useOpenIndividualChat,
+  useOpenGroupChat,
+} from "../features/messages/useMessages";
+import { useQuery } from "@tanstack/react-query";
 
 function IndividualChatTitleContent({ data }) {
+  const { data: userId } = useQuery({ queryKey: ["userId"] });
   const { setSelectedChat } = UseChatDetailsProvider();
+  const { isOpening, openChat } = useOpenIndividualChat();
+  const { isOpeningGroupChat, openChatGroup } = useOpenGroupChat();
 
   const navigate = useNavigate();
 
   function handleSelection(chat) {
     if (chat !== null) {
       setSelectedChat(chat);
+
+      if (chat.chatType) {
+        openChat({ userId: userId, chatId: chat.chatId });
+      }
+
+      if (!chat.chatType) {
+        openChatGroup({ userId: userId, chatId: chat.chatId });
+      }
+
       navigate("chat-details");
     }
   }
@@ -21,15 +38,12 @@ function IndividualChatTitleContent({ data }) {
         <div
           className="w-full cursor-pointer"
           onClick={() => handleSelection(chat)}
-          key={chat.id}
+          key={chat.chatId}
         >
-          <div
-            key={chat.id}
-            className="flex flex-row justify-between w-full pb-4 items-start"
-          >
+          <div className="flex flex-row justify-between w-full pb-4 items-start">
             <div className="w-1/5 pr-2 pb-2">
               <img
-                src={chat.imageUrl}
+                src={chat.imageUrl || "/default-image.webp"}
                 alt="User image"
                 className="h-12 w-12 rounded-full"
               />

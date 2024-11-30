@@ -9,6 +9,9 @@ import { SelectedChatProvider } from "./context/selectedChatDetails";
 import { SelectedQueryProvider } from "./context/SearchQuery";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import ProtectedRoute from "./ui/ProtectedRoute";
+import SignUp from "./pages/SignUp";
+import Login from "./pages/Login";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,8 +29,14 @@ function App() {
           <ReactQueryDevtools initialIsOpen={false} />
           <BrowserRouter>
             <Routes>
-              <Route element={<AppLayout />}>
-                <Route index element={<Navigate replace to="Chats" />} />
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/" element={<Navigate replace to="/Login" />} />
                 <Route path="Chats" element={<Chats />}>
                   <Route
                     path="chat-details"
@@ -43,6 +52,8 @@ function App() {
                 <Route path="NewFriend" element={<NewFriend />} />
                 <Route path="IndividualChat" element={<NewFriend />} />
               </Route>
+              <Route path="Signup" element={<SignUp />} />
+              <Route index path="Login" element={<Login />} />
             </Routes>
           </BrowserRouter>
         </QueryClientProvider>
