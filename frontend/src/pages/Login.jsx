@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { useLoginUser } from "../features/user/useUser";
 import { ClipLoader } from "react-spinners";
-import { useEffect } from "react";
+
 function Login() {
   const { register, formState, handleSubmit, reset } = useForm();
   const { errors } = formState;

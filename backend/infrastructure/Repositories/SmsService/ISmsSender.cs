@@ -7,5 +7,5 @@ namespace infrastructure.Repositories.SmsService;
 
     public interface ISmsSender
     {
-        Task SendSmsAsync(string number, string message);
+        Task<bool> SendSmsAsync(string number, string message);
     }

@@ -18,8 +18,8 @@ function NewFriend() {
   }
 
   return (
-    <div className="flex items-center justify-center w-full h-full">
-      <div className=" text-center   bg-neutral-200 w-1/2 min-h-32 p-4">
+    <div className="flex items-center justify-center w-full h-full ">
+      <div className=" text-center   bg-neutral-200 w-1/2 min-h-32 p-4 dark:bg-cyan-700">
         <p className="pt-5 font-bold text-3xl m-4">Start New Chat</p>
         <p className="mb-4">Intialize a conversation with a new contact</p>
         <form onSubmit={handleSubmit}>
@@ -37,7 +37,10 @@ function NewFriend() {
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
           />
-          <button className="bg-green-300 w-60 h-12 text-center" type="submit">
+          <button
+            className="bg-green-300 w-60 h-12 text-center text-white"
+            type="submit"
+          >
             Create Now
           </button>
         </form>

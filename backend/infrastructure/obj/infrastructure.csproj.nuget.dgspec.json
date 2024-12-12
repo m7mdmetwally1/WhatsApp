@@ -216,6 +216,10 @@
               "target": "Package",
               "version": "[8.0.8, )"
             },
+            "SixLabors.ImageSharp": {
+              "target": "Package",
+              "version": "[3.1.6, )"
+            },
             "Twilio": {
               "target": "Package",
               "version": "[7.2.3, )"

@@ -6,6 +6,7 @@ using Application.UserDto;
 using infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using Microsoft.AspNetCore.Authorization;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -28,6 +29,7 @@ public class UserController :ControllerBase
 
     [HttpPost]
     [Route("add-friend")]
+    //  [Authorize]
     public async Task<ActionResult> AddFriend(CreateIndividualChatDto chatDto)
     {   
 
@@ -44,6 +46,7 @@ public class UserController :ControllerBase
 
     [HttpPost]
     [Route("Delete-image")]
+     [Authorize]
     public async Task<ActionResult> DeleteImage(string? userId,string? groupChatId)
     {
         if(string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(groupChatId))
@@ -83,8 +86,11 @@ public class UserController :ControllerBase
 
     [HttpPost]
     [Route("Upload-Image")]
+    //  [Authorize]
     public async Task<ActionResult> UploadImage(UploadImageDto uploadImageDto)
     {
+        _logger.LogInformation($"{uploadImageDto.ImageUrl} test");
+        _logger.LogInformation($"{uploadImageDto.UserId} test");
         if(!string.IsNullOrWhiteSpace(uploadImageDto.UserId) && !string.IsNullOrWhiteSpace(uploadImageDto.GroupChatId))
         {
             return BadRequest("the image should be specific for user or Group");
@@ -104,13 +110,13 @@ public class UserController :ControllerBase
         {
             return StatusCode(500,new {Success=false,ErrorMessage=$"{result.Message}"}); 
         }
-      
-             
-        return Ok(new {Success=true,Message=result.Message});
+                   
+        return Ok(new {Success=true,Message=result.Message,ImageUrl=result.SingleData.ImageUrl??""});
     } 
 
     [HttpPost]
     [Route("my-friends")]
+     [Authorize]
     public async Task<ActionResult> MyFriends(string userId)
     {
         if(userId== null) return BadRequest("no userId sent");

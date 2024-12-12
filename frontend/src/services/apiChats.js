@@ -11,30 +11,42 @@ export async function getChats(userId, token) {
   return response.json();
 }
 
-export async function createIndividualChat(userId, number, customeName) {
+export async function createIndividualChat(userId, number, customeName, token) {
   const response = await fetch(
     `http://localhost:5233/add-friend?SenderUserId=${userId}&FriendNumber=${number}&CustomName=${customeName}`,
-    { method: "POST" }
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 
   return response.json();
 }
 
-export async function createGroupChat(members, userId) {
+export async function createGroupChat(members, userId, token, name) {
   const response = await fetch(
     `http://localhost:5233/api/Chat/CreateGroupChat`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         groupChatUsers: members.map((member) => member.friendId),
-        name: `new Group`,
+        name: name,
         groupChatCreator: userId,
       }),
     }
   );
 
-  return response.json();
+  const responseData = await response.json();
+
+  if (!response.ok || responseData.error) {
+    throw new Error(responseData.error);
+  }
+
+  return responseData;
 }

@@ -16,9 +16,9 @@ function ProtectedRoute({ children }) {
 
   useEffect(
     function () {
-      if (!token) navigate("/login");
+      if (!token && !isLoading && !refreshToken) navigate("/login");
     },
-    [token, navigate]
+    [token, navigate, isLoading, refreshToken]
   );
 
   if (token) return children;

@@ -40,7 +40,7 @@ public class ChatController : ControllerBase
     }
     
     [HttpGet("MyChats")]
-    [Authorize]
+    // [Authorize]
     public async Task<ActionResult> GetChats(string userId)
     {
     
@@ -55,7 +55,6 @@ public class ChatController : ControllerBase
                 return StatusCode(500,new {Success=false,ErrorMessage=$"{individualChatsResult.Message}"}); 
             }  
         
-
         var groupChatsResults = await _chatManager.GetUserGroupChats(userId);
         
         if(!groupChatsResults.Success)
@@ -64,13 +63,13 @@ public class ChatController : ControllerBase
             }  
         var allChats = individualChatsResult.Data.Concat(groupChatsResults.Data);              
 
-        return Ok(new { Success= individualChatsResult.Success,Data = allChats});
+        return Ok(new { Success= individualChatsResult.Success,Data = allChats,});
     }
 
     [HttpPost("CreateGroupChat")]
+     [Authorize]
     public async Task<ActionResult> CreateGroupChat(CreateGroupChatDto createGroupChatDto)
     {                         
-
         
         var result =await _chatManager.CreateGroupChat(createGroupChatDto);
                
@@ -85,6 +84,7 @@ public class ChatController : ControllerBase
 
     [HttpPost]
     [Route("AddGroupMember")]
+     [Authorize]
     public async Task<ActionResult> AddGroupMember(string userId,string chatId,string creatorId)
     {                   
         var result = await _chatManager.AddGroupMember(userId,chatId,creatorId);

@@ -44,7 +44,7 @@ function IndividualChatDetails() {
         <ChatHeader chatDetails={selectedChat} />
       </div>
 
-      <ChatMessages Messages={data?.data} />
+      <ChatMessages Messages={data?.data} isLoading={isLoading} />
 
       <div>
         <ChatManageMessages chatDetails={selectedChat} />

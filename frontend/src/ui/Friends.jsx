@@ -3,11 +3,10 @@ import Friend from "./Friend";
 
 function Friends({ members, setMembers }) {
   let { data, isLoading, error } = useFriends();
-  console.log(data);
 
   return (
     <div
-      className="w-1/2 border p-5 overflow-y-scroll"
+      className="w-1/2 border p-5 overflow-y-scroll dark:text-white"
       style={{
         maxHeight: "70vh",
       }}

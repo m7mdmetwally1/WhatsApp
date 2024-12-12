@@ -13,7 +13,6 @@ function SignUp() {
         onSettled: () => reset(),
       }
     );
-    console.log(isCreating);
   }
 
   return (

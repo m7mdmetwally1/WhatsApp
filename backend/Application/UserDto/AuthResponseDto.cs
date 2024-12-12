@@ -13,6 +13,7 @@ public class AuthResponseDto
     public string? PhoneNumber { get; set; }
 
     public string? ErrorMessage {get;set;}
+    public string? ImageUrl {get;set;}
 
 }
 

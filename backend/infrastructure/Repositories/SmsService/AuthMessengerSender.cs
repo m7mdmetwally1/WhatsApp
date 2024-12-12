@@ -18,9 +18,12 @@ namespace infrastructure.Repositories.SmsService;
     
     public class AuthMessageSender : IEmailSender, ISmsSender
     {
-        public AuthMessageSender(IOptions<SMSoptions> optionsAccessor)
+    private readonly ILogger<AuthMessageSender> _logger;
+
+    public AuthMessageSender(IOptions<SMSoptions> optionsAccessor,ILogger<AuthMessageSender> logger)
         {
             Options = optionsAccessor.Value;
+            this._logger = logger;
         }
 
         public SMSoptions Options { get; }  
@@ -49,21 +52,47 @@ namespace infrastructure.Repositories.SmsService;
             return Task.FromResult(0);
         }
 
-        public Task SendSmsAsync(string number, string message)
+        public async Task<bool> SendSmsAsync(string number, string message)
         {
          
             var accountSid = Options.SMSAccountIdentification;
           
-            var authToken = Options.SMSAccountPassword;
-
-            
+            var authToken = Options.SMSAccountPassword;            
 
             var client = new TwilioRestClient(accountSid, authToken);
+                 
+            TwilioClient.Init(accountSid, authToken);
+         
+            try
+            {
+                var messageResource =await  MessageResource.CreateAsync(
+                to: new Twilio.Types.PhoneNumber($"whatsapp:{number}"),
+                from: new Twilio.Types.PhoneNumber("whatsapp:+17754875250"),
+                body: message,
+                client: client);
 
-            return MessageResource.CreateAsync(
-              to: new PhoneNumber(number),
-              from: new PhoneNumber(Options.SMSAccountFrom),
-              body: message,
-              client:client);
-        }
+                if (messageResource.Status == MessageResource.StatusEnum.Queued ||
+                messageResource.Status == MessageResource.StatusEnum.Sent ||
+                messageResource.Status == MessageResource.StatusEnum.Delivered)
+                {
+                    return true; 
+                }
+
+                return false;
+            }catch(Exception ex)
+            {
+                _logger.LogInformation($"error message {ex}");
+                return false;
+            }             
+            
+            }
+            
     }
+
+    
+
+   // return MessageResource.CreateAsync(
+            //   to: new PhoneNumber(number),
+            //   from: new PhoneNumber(Options.SMSAccountFrom),
+            //   body: message
+            //   );

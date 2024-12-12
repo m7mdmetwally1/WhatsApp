@@ -32,7 +32,11 @@ function Friend({ data, members, setMembers }) {
           onClick={() => handleAddMember(friend)}
         >
           <div className="ml-4 mr-5">
-            <VscAccount size={45} />
+            <img
+              src={friend.imageUrl || "/default-image.webp"}
+              alt="Profile"
+              className="w-10 h-10 rounded-full border border-gray-300 shadow-md"
+            />
           </div>
           <div className="flex flex-col justify-center items-center ">
             <p className="font-bold">{friend.friendCustomName}</p>

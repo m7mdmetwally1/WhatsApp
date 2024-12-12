@@ -90,7 +90,7 @@ public class UserManager : IUserManager
        result.Message=$"Internal server error";      
        return result;
       }
-
+        
        result.SingleData=imageKitResponse;
        result.Message=$"image uploaded successfully";
        return result;
@@ -142,7 +142,7 @@ public class UserManager : IUserManager
 
     try
     {
-      var user =await _context.User.Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
+      var user =await _context.User.Include(u=>u.Friends).Where(u=>u.Id == chatDto.SenderUserId).FirstOrDefaultAsync();
       var friend =await _context.User.Where(u => u.Number == chatDto.FriendNumber).FirstOrDefaultAsync();
 
       if(user == null || friend == null){
@@ -151,23 +151,22 @@ public class UserManager : IUserManager
         return result;
       }
 
-      var isFriendAlready = user.Friends.Any(f => f.Id == friend.Id);
+      var isFriendAlready =  user.Friends.Any(f =>f.UserId==user.Id && f.Id == friend.Id);
+     
 
-      if (isFriendAlready)
+      if (!isFriendAlready)
       {
-        result.Success=false;
-        result.Message="there is  user with this id in the chat";        
-        return result;
+        user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??"",ImageUrl=friend.ImageUrl});
       }
-
-      user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??"",ImageUrl=friend.ImageUrl});
-
+      _logger.LogInformation($"{isFriendAlready}");
+    
       var chatResult =await _chatManager.GetIndividualChat(chatDto.SenderUserId,friend.Id);
 
       if(chatResult != null && chatResult.SingleData != null ){
-          var chatUpdated = await _chatManager.UpdateChatCustomName(chatDto.SenderUserId,chatDto.CustomName ?? "",chatResult.SingleData.Id);            
+          var chatUpdated = await _chatManager.UpdateChatCustomName(chatDto.SenderUserId,chatDto.CustomName ?? "",chatResult.SingleData.Id); 
+          _logger.LogInformation($"{chatUpdated.Message}")  ;         
           if(chatUpdated != null){
-            result.Success=false;
+            result.Success=true;
             result.Message="chat already exist and your friend custom name updated";            
             return result;
           }

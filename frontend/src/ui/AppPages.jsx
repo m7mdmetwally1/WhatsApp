@@ -9,13 +9,13 @@ function AppPages() {
 
   return (
     <div className="my-8">
-      <div className="text-lg text-white flex mb-20  justify-start items-center">
+      <div className="text-lg text-white flex mb-20  justify-start items-center ">
         <span className="ml-6 text-3xl text-green-400 ">
           <IoLogoWhatsapp />
         </span>
         <span className="ml-6 "> Whats App</span>
       </div>
-      <div className="text-lg text-gray-400">
+      <div className="text-lg text-gray-400 ">
         <div className=" flex mb-8  justify-start items-center hover:text-white cursor-pointer">
           <span className="ml-6 text-3xl ">
             <IoHomeOutline />
@@ -39,7 +39,10 @@ function AppPages() {
           <span className="ml-6 text-3xl ">
             <CiSettings />
           </span>
-          <span className="ml-6"> Settings </span>
+          <span onClick={() => navigate("/settings")} className="ml-6">
+            {" "}
+            Settings{" "}
+          </span>
         </div>
       </div>
     </div>

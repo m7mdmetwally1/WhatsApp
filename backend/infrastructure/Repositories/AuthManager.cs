@@ -21,6 +21,7 @@ using Application.ChatsDto;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Security.Cryptography;
+using System.Reflection.Emit;
 
 namespace infrastructure.Repositories;
 
@@ -61,9 +62,9 @@ public class AuthManager : IAuthMangaer
     var result = await _userManager.CreateAsync(_user,userDto.Password);     
     _logger.LogInformation($"{result.Succeeded}"); 
     if(result.Succeeded){
-        // var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, userDto.PhoneNumber);
-
-        // await _smsSender.SendSmsAsync($"{userDto.PhoneNumber}",$"your verification code is {code}"); 
+         
+        _logger.LogInformation($"{userDto.PhoneNumber}");
+       
 
         var chatUser = new User
         {      
@@ -119,7 +120,7 @@ public class AuthManager : IAuthMangaer
     {
       return new AuthResponseDto
       {
-          ErrorMessage= "Invalid data"
+          ErrorMessage= "there is no user with this number"
       };
     }
     
@@ -128,18 +129,28 @@ public class AuthManager : IAuthMangaer
     if(isValidUser)
     {        
       var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+      var imageUrl = await _context.User.Where(u=>u.Id==user.Id).Select(u=>u.ImageUrl).FirstOrDefaultAsync();
 
       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
 
       var token =  GenerateJWTToken();
       var RefreshToken = GenerateRefreshToken(user.PhoneNumber);
-
+      
+      // if(isTwoFactorEnabled)
+      // {
+      //   var userNumber=$"+2{user.PhoneNumber}";         
+      //   var code = await _userManager.GenerateChangePhoneNumberTokenAsync(user, user.PhoneNumber);
+      //   var result =    await _smsSender.SendSmsAsync($"{userNumber}",$"your verification code is {code}");                 
+      //   isTwoFactorEnabled = result ? true : false;
+      // }
+        
       return new AuthResponseDto
       {
           Token = token,
           UserId = user.Id,
           RefreshToken=RefreshToken, 
           PhoneNumber=user.PhoneNumber,
+          ImageUrl=imageUrl,
         IsTwoFactorEnabled=isTwoFactorEnabled,
         IsEmailConfirmed=isEmailConfirmed
       };
@@ -147,7 +158,7 @@ public class AuthManager : IAuthMangaer
 
       return  new AuthResponseDto
       {
-        ErrorMessage= "user Not Valid"
+        ErrorMessage= "password not correct"
       };
   } 
   private string GenerateJWTToken()
@@ -167,16 +178,16 @@ public class AuthManager : IAuthMangaer
 
   }
 
-  public async Task<bool> VerifyPhoneNumberCode(string phoneNumber, string code)
+  public async Task<bool> VerifyPhoneNumberCode(string userId, string code)
   {
 
-    var user = await _userManager.FindByNameAsync(phoneNumber);
+    var user = await _userManager.FindByIdAsync(userId);
 
     if (user == null || user.PhoneNumber == null)
     {
         return false;
     }
-
+  
     var isValidCode = await _userManager.VerifyChangePhoneNumberTokenAsync(user, code, user.PhoneNumber);
 
     if (isValidCode)
@@ -216,26 +227,31 @@ public class AuthManager : IAuthMangaer
 
   }
 
-  public async Task<bool> CheckTwoFactor(CheckTwoFactorDto checkTwoFactorDto)
+  public async Task<bool> EnableDisableTwoFactor(string userId)
   {
 
-    var _user = await _userManager.FindByNameAsync(checkTwoFactorDto.PhoneNumber);
+    var _user = await _userManager.FindByIdAsync(userId);
 
     if(_user == null)
     {
       return false;
     }
 
-    var enabled = await _userManager.GetTwoFactorEnabledAsync(_user);
-
-    if(enabled)
+    if(!_user.TwoFactorEnabled)
     {
+       var result= await _userManager.SetTwoFactorEnabledAsync(_user, true);
+      if(result.Succeeded) return true;
+      return false;
+    }    
+
+    if(_user.TwoFactorEnabled)
+    {
+      var result = await _userManager.SetTwoFactorEnabledAsync(_user, false);
+      if(result.Succeeded) return false;
       return true;
     }
 
-    await _userManager.SetTwoFactorEnabledAsync(_user, true);
-
-    return false;
+    return _user.TwoFactorEnabled;
   }
 
   public async Task<bool> VerifyEmail(string email,string phoneNumber )
@@ -275,9 +291,10 @@ public class AuthManager : IAuthMangaer
     }
 
     var code = await _userManager.GenerateChangePhoneNumberTokenAsync(_user, phoneNumber);
+  
 
     try{
-    await _smsSender.SendSmsAsync($"{phoneNumber}",$"your verification code is {code}"); 
+    await _smsSender.SendSmsAsync($"{phoneNumber}",$"your Two Factor Authentication code is {code}"); 
     return true;
 
     }catch(Exception ex){
@@ -345,10 +362,11 @@ public class AuthManager : IAuthMangaer
 
       var newToken = GenerateJWTToken();
       var newRefreshToken = GenerateRefreshToken(phoneNumber);
-      var user = await _userManager.Users
-        .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);        
+      var userApi = await _userManager.Users
+        .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);  
+        var user = await _context.User.Where(u=>u.Id == userApi.Id).FirstOrDefaultAsync();
 
-      return new AuthResponseDto{Token=newToken,RefreshToken=newRefreshToken,UserId=user.Id};
+      return new AuthResponseDto{Token=newToken,RefreshToken=newRefreshToken,UserId=userApi.Id,ImageUrl=user.ImageUrl,IsTwoFactorEnabled=userApi.TwoFactorEnabled};
     }
     catch (Exception ex)
     {        

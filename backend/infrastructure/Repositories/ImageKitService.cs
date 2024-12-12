@@ -11,6 +11,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.CodeAnalysis.CSharp;
 using Application.UserDto;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+using System.IO;
 
 namespace infrastructure.Repositories;
 
@@ -26,11 +30,16 @@ public class ImageKitService : IImageKitService
     public async  Task<ImageKitResponse> UploadImage(IFormFile imageUrl){
         ImagekitClient imagekit = new ImagekitClient("public_w5izE1WwpvRFWesXz3v/g6w0FFs=", "private_431PL5FB4Rj/rrTsdwkMHLI/0AM=", "https://ik.imagekit.io/s1r03vuv9/whatsAppClone/");
 
-         string base64Image = await FileConverter.ConvertFormFileToBase64(imageUrl);   
-
+        //  string base64Image = await FileConverter.ConvertFormFileToBase64(imageUrl);
+         using var stream = new MemoryStream();
+         using var image = Image.Load(imageUrl.OpenReadStream());
+        image.Mutate(x => x.Resize(150, 150)); 
+        image.Save(stream, new JpegEncoder { Quality = 75 }); 
+        var base64Image = Convert.ToBase64String(stream.ToArray());   
+        
         var transformation = new UploadTransformation
         {
-            pre = "w-300,h-400",  
+            pre = "q-75",  
             post = new List<PostTransformation>  
             {
                 new PostTransformation
@@ -38,6 +47,7 @@ public class ImageKitService : IImageKitService
                     type = "transformation",   
                     value = "bg-red"           
                 }
+             
             }
         };
        
@@ -46,6 +56,7 @@ public class ImageKitService : IImageKitService
             file = base64Image,
             fileName = Guid.NewGuid().ToString(),
            transformation =transformation,
+           
         } ;
 
         Result resp;
@@ -61,6 +72,7 @@ public class ImageKitService : IImageKitService
                      
         }catch(Exception err){           
             _logger.LogInformation($"{err}");
+            _logger.LogError(err.Message);
             return new ImageKitResponse{Message=$" internal server error",Success=false};
         }
 

@@ -1,13 +1,15 @@
-export async function getFriends(userId) {
+export async function getFriends(userId, token) {
   const response = await fetch(
     `http://localhost:5233/my-friends?userId=${userId}`,
     {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
   );
 
   if (!response.ok) {
-    console.log("not success");
     throw new Error("Failed get friends data");
   }
 
@@ -18,12 +20,16 @@ export async function createUserApi(
   firstName,
   lastName,
   password,
-  phoneNumber
+  phoneNumber,
+  token
 ) {
   const response = await fetch(`http://localhost:5233/api/Authentication`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
     body: JSON.stringify({
       phoneNumber: phoneNumber,
@@ -32,22 +38,23 @@ export async function createUserApi(
       password: password,
     }),
   });
+  const resonseData = await response.json();
 
   if (!response.ok) {
-    console.log("not success");
-    throw new Error("Failed get friends data");
+    throw new Error(resonseData.errors[0]);
   }
 
-  return response.json();
+  return resonseData;
 }
 
-export async function loginUserApi(phoneNumber, password) {
+export async function loginUserApi(phoneNumber, password, token) {
   const response = await fetch(
     `http://localhost:5233/api/Authentication/Login`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         phoneNumber: phoneNumber,
@@ -56,24 +63,84 @@ export async function loginUserApi(phoneNumber, password) {
     }
   );
 
+  const responseData = await response.json();
+
+  if (!response.ok || responseData.error) {
+    throw new Error(responseData.error);
+  }
+
+  return responseData;
+}
+
+export async function verifyRefreshTokenApi(refreshToken, token) {
+  const response = await fetch(
+    `http://localhost:5233/api/Authentication/VerifyRefreshToken?refreshToken=${refreshToken}`,
+    {
+      method: "POST",
+      header: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
   if (!response.ok) {
-    console.log("not success");
-    throw new Error("Failed get friends data");
+    throw new Error("Failed get verify refresh token");
   }
 
   return response.json();
 }
 
-export async function verifyRefreshTokenApi(refreshToken) {
+export async function uploadImageApi(userId, formData, token) {
   const response = await fetch(
-    `http://localhost:5233/api/Authentication/VerifyRefreshToken?refreshToken=${refreshToken}`,
+    `http://localhost:5233/Upload-Image?UserId=${userId}`,
     {
       method: "POST",
+      header: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
     }
   );
 
   if (!response.ok) {
-    console.log("not success");
+    throw new Error("Failed get verify refresh token");
+  }
+
+  return response.json();
+}
+
+export async function verifyTwoFactorAuthApi(userId, code, token) {
+  const response = await fetch(
+    `http://localhost:5233/api/Authentication/VerifyPhoneNumber?userId=${userId}&&code=${code}`,
+    {
+      method: "POST",
+      header: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const responseData = await response.json();
+
+  if (!response.ok || responseData.error) {
+    throw new Error(responseData.error);
+  }
+
+  return responseData;
+}
+
+export async function enableDisableTwoFactorAuthApi(userId, token) {
+  const response = await fetch(
+    `http://localhost:5233/api/Authentication/EnableDisableTwoFactor?userId=${userId}`,
+    {
+      method: "POST",
+      header: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
     throw new Error("Failed get verify refresh token");
   }
 

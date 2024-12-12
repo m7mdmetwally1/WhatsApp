@@ -12,13 +12,10 @@ public interface IAuthMangaer
      Task<IEnumerable<IdentityError>> ConfirmEmail(string userId, string token);
      Task<bool> VerifyPhoneNumberCode(string id,string code);
      Task<bool> ResendSms (string phoneNumber);
-     Task<bool> CheckTwoFactor (CheckTwoFactorDto checkTwoFactorDto);
+     Task<bool> EnableDisableTwoFactor (string userId);
      Task<bool> VerifyEmail (string email,string phoneNumber);
      Task<bool> SendTwoFactorCode (string phoneNumber);
      Task<AuthResponseDto> VerifyRefreshToken (string refreshToken);
-     Task<AuthResponseDto> Login(LoginDto loginDto);
-
-    //  Task<string> CreateRefreshToken();
-    //  Task<string> VerifyRefreshToken();   
+     Task<AuthResponseDto> Login(LoginDto loginDto);      
 }
 

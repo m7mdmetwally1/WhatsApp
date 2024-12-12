@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "qJpcNgqYPM8=",
+  "dgSpecHash": "vagX1Gru0eY=",
   "success": true,
   "projectFilePath": "E:\\projects\\whatsapp\\backend\\presentation\\presentation.csproj",
   "expectedPackageFiles": [
@@ -149,6 +149,7 @@
     "C:\\Users\\Dell\\.nuget\\packages\\serilog.sinks.debug\\2.0.0\\serilog.sinks.debug.2.0.0.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\serilog.sinks.file\\5.0.0\\serilog.sinks.file.5.0.0.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\serilog.sinks.seq\\8.0.0\\serilog.sinks.seq.8.0.0.nupkg.sha512",
+    "C:\\Users\\Dell\\.nuget\\packages\\sixlabors.imagesharp\\3.1.6\\sixlabors.imagesharp.3.1.6.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\swashbuckle.aspnetcore\\6.4.0\\swashbuckle.aspnetcore.6.4.0.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\6.4.0\\swashbuckle.aspnetcore.swagger.6.4.0.nupkg.sha512",
     "C:\\Users\\Dell\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\6.4.0\\swashbuckle.aspnetcore.swaggergen.6.4.0.nupkg.sha512",

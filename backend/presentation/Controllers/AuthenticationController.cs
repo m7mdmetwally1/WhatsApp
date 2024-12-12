@@ -60,10 +60,11 @@ public class AuthenticationController : ControllerBase
         }
 
         var result = await _authManager.Login(login);
+        
 
         if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
         {
-            return BadRequest("Invalid login data");
+            return BadRequest(new {Error= result.ErrorMessage});
         }
 
         return Ok(result);
@@ -90,18 +91,18 @@ public class AuthenticationController : ControllerBase
 
     [HttpPost]
     [Route("VerifyPhoneNumber")]
-    public async Task<ActionResult> VerifyPhoneNumber(string phoneNumber, string code)
+    public async Task<ActionResult> VerifyPhoneNumber(string userId, string code)
     {
-        if (phoneNumber == null || code == null)
+        if (userId == null || code == null)
         {
-            return BadRequest("please try again later");
+            return BadRequest(new {error="invalid data"});
         }
 
-        var result = await _authManager.VerifyPhoneNumberCode(phoneNumber, code);
+        var result = await _authManager.VerifyPhoneNumberCode(userId, code);
 
         if (result == false)
         {
-            return BadRequest(" failed to verify your number try again later");
+            return BadRequest(new {error="invalid intered code "});
         }
 
         return Ok(result);
@@ -122,23 +123,12 @@ public class AuthenticationController : ControllerBase
     }
 
     [HttpPost]
-    [Route("CheckTwoFactor")]
-    public async Task<CheckTwoFactorResponseDto> CheckTwoFactor(CheckTwoFactorDto checkTwoFactorDto)
+    [Route("EnableDisableTwoFactor")]
+    public async Task<ActionResult> EnableDisableTwoFactor(string userId)
     {
-        var result = await _authManager.CheckTwoFactor(checkTwoFactorDto);
-
-        if (result == false)
-        {
-            return new CheckTwoFactorResponseDto
-            {
-                TwoFactorEnabled = false
-            };
-        }
-
-        return new CheckTwoFactorResponseDto
-        {
-            TwoFactorEnabled = true
-        };
+        var result = await _authManager.EnableDisableTwoFactor(userId);
+       
+       return Ok(new {TwoFactorEnabled=result});
     }
 
     [HttpPost]

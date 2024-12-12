@@ -4,53 +4,56 @@ import {
   createIndividualChat,
   createGroupChat,
 } from "../../services/apiChats";
+import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export function useChats() {
   const { data: userId } = useQuery({ queryKey: ["userId"] });
   const { data: token } = useQuery({ queryKey: ["token"] });
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, success } = useQuery({
     queryKey: ["chats", userId],
     queryFn: () => getChats(userId, token),
     enabled: !!userId,
   });
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, success };
 }
 
-export function useCreateIndividualChat(userId, number, customName) {
+export function useCreateIndividualChat() {
   const queryClient = useQueryClient();
+  const { data: token } = useQuery({ queryKey: ["token"] });
+  const navigate = useNavigate();
 
   const { isLoading: isCreating, mutate: createChat } = useMutation({
     mutationFn: ({ userId, number, customName }) =>
-      createIndividualChat(userId, number, customName),
+      createIndividualChat(userId, number, customName, token),
     onSuccess: (data) => {
-      console.log(data);
+      toast.success(" chat created successfully");
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      navigate("/chats");
     },
     onError: (error) => {
-      console.error("Error creating chat:", error);
-
-      alert("Failed to create chat. Please try again later.");
+      toast.error(`Error:${error}`);
     },
   });
 
   return { isCreating, createChat };
 }
 
-export function useCreateGroupChat(members) {
+export function useCreateGroupChat() {
   const queryClient = useQueryClient();
   const { data: userId } = useQuery({ queryKey: ["userId"] });
+  const { data: token } = useQuery({ queryKey: ["token"] });
   const { isLoading: isCreating, mutate: createGroup } = useMutation({
-    mutationFn: ({ members }) => createGroupChat(members, userId),
+    mutationFn: ({ members, name }) =>
+      createGroupChat(members, userId, token, name),
     onSuccess: (data) => {
-      console.log(data);
+      toast.success(" group chat created successfully");
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error) => {
-      console.error("Error creating group chat:", error);
-
-      alert("Failed to create group chat. Please try again later.");
+      toast.error(`Error:${error}`);
     },
   });
 

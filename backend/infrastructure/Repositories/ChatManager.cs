@@ -93,7 +93,8 @@ public class ChatManager : IChatManager
 
     if(!exist) GroupChat.Members.Add(new GroupChatUser{UserId=creator.Id ,GroupChatId=GroupChat.Id});
     
-    GroupChat.GroupCreatorId= creator.Id; 
+    GroupChat.GroupCreatorId= creator.Id;
+    GroupChat.Name= chatDto.Name; 
     try
     {
       _context.Chat.Add(GroupChat);

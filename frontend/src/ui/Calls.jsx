@@ -5,7 +5,7 @@ import { IoVideocam } from "react-icons/io5";
 
 function Calls() {
   return (
-    <div className="flex flex-col items-center border-r p-2 pt-6 pb-6 w-1/2">
+    <div className="flex flex-col items-center p-2 pt-6 pb-6 w-1/2 dark:text-white">
       <div className="flex flex-row justify-between w-full  items-center mb-10">
         <p className="text-3xl font-bold ml-4">Calls</p>
         <div className="mr-4">

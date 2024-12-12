@@ -25,13 +25,13 @@ function Search() {
   );
 
   return (
-    <div className="ml-8 flex flex-row items-center my-4">
-      <CiSearch size={24} />
+    <div className="ml-8 flex flex-row items-center my-4 ">
+      <CiSearch size={40} className="dark:text-white" />
 
       <input
         type="text"
         placeholder="Search for contacts,groups"
-        className="p-2 w-full outline-none"
+        className="p-2 w-full outline-none dark:bg-cyan-950"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         ref={inputEl}

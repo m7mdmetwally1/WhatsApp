@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Application.Interfaces;
 using Application.Common;
+using Microsoft.AspNetCore.Authorization;
 
 namespace presentation.Controllers.ChatControllers;
 
@@ -29,6 +30,7 @@ public class MessagesController : ControllerBase
     
     [HttpGet]
     [Route("IndividualChat")]
+     [Authorize]
     public async Task<ActionResult> IndividualChatMessages(string chatId,string userId)
     {         
        
@@ -44,6 +46,7 @@ public class MessagesController : ControllerBase
     
     [HttpGet]
     [Route("GroupChat")]
+     [Authorize]
     public async  Task<ActionResult> GroupChatMessages(string chatId,string userId)
     {               
         var result = await _messagesManager.GroupChatMessages(userId, chatId);
@@ -58,6 +61,7 @@ public class MessagesController : ControllerBase
     
     [HttpPost]
     [Route("InsertMessage/IndividualChat")]
+     [Authorize]
     public async Task<ActionResult> InsertMessage([FromBody] InsertIndividualMessageDto message)
     {
         _logger.LogInformation($"{message.UserId} before inter");
@@ -79,6 +83,7 @@ public class MessagesController : ControllerBase
 
     [HttpPost]
     [Route("InsertMessage/GroupChat")]
+     [Authorize]
     public async Task<ActionResult> InsertMessage(InsertGroupMessageDto message)
     {    
         if(!ModelState.IsValid)
@@ -98,6 +103,7 @@ public class MessagesController : ControllerBase
 
     [HttpPost]
     [Route("Open/IndividualChat")]
+     [Authorize]
     public async Task<ActionResult> OpenIndividualChat(string userId,string chatId)
     {
        if(!ModelState.IsValid)
@@ -118,6 +124,7 @@ public class MessagesController : ControllerBase
 
     [HttpPost]
     [Route("Open/GroupChat")]
+     [Authorize]
     public async Task<ActionResult> OpenGroupChat(string userId,string chatId)
     {
         if(userId== null){
@@ -140,6 +147,7 @@ public class MessagesController : ControllerBase
 
     [HttpPost]
     [Route("ChangeContent")]
+     [Authorize]
     public async Task<ActionResult> ChangeContent(string userId,string chatId,string messageId,string newContent)
     {
         if(userId== null){
