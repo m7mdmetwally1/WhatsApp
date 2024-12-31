@@ -1,13 +1,23 @@
 import { MdOutlineAddBox } from "react-icons/md";
 import IndividualChatTitleContent from "./IndividualChatTitleContent";
+import { useQuery as useReactQuery } from "@tanstack/react-query";
 import { useQuery } from "./../context/SearchQuery";
 import { useChats } from "./../features/chats/useChats";
 import { ClipLoader } from "react-spinners";
+import { useEffect } from "react";
+import useSignalRStore from "../store/useSignalRStore";
 
 function ChatsTitleContent() {
   const { query } = useQuery();
-
+  const { data: token } = useReactQuery({
+    queryKey: ["token"],
+  });
   let { data, isLoading, error } = useChats();
+  const { startConnection } = useSignalRStore();
+
+  useEffect(() => {
+    startConnection("http://localhost:5233/chatHub", token);
+  }, [startConnection, token]);
 
   let finalData = data?.data;
 

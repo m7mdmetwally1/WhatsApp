@@ -40,7 +40,7 @@ public class ChatController : ControllerBase
     }
     
     [HttpGet("MyChats")]
-    // [Authorize]
+    [Authorize]
     public async Task<ActionResult> GetChats(string userId)
     {
     

@@ -1,11 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ClipLoader } from "react-spinners";
+import useSignalRStore from "../store/useSignalRStore";
 
 function ChatMessages({ Messages, isLoading }) {
-  const { data: userId } = useQuery({ queryKey: ["userId"] });
+  const [messages, setMessages] = useState([]);
 
-  const sortedMessages = [...(Messages || [])].sort(
+  const { data: userId } = useQuery({ queryKey: ["userId"] });
+  const { connection } = useSignalRStore();
+
+  useEffect(() => {
+    if (Messages) {
+      setMessages(Messages);
+    }
+  }, [Messages]);
+
+  useEffect(() => {
+    if (connection) {
+      connection.off("ReceiveMessage");
+      connection.on("ReceiveMessage", (chatId, userId, content) => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { chatId, senderId: userId, content },
+        ]);
+      });
+    }
+
+    return () => {
+      connection?.off("ReceiveMessage");
+    };
+  }, [connection]);
+
+  const sortedMessages = [...(messages || [])].sort(
     (a, b) => new Date(a.sentAt) - new Date(b.sentAt)
   );
 

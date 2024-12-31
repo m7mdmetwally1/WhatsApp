@@ -20,18 +20,13 @@ function ChatManageMessages({ chatDetails }) {
   const { isOpeningGroupChat, openChatGroup } = useOpenGroupChat();
 
   const handleFocus = () => {
-    console.log(isFocused);
     setIsFocused(true);
-    console.log(isFocused);
+
     if (isFocused) {
       if (!chatDetails.chatType) {
-        console.log("inside is focused and group chat ");
-
         openChatGroup({ userId: userId, chatId: chatDetails.chatId });
       }
       if (chatDetails.chatType) {
-        console.log("inside is focused and open chat");
-
         openChat({ userId: userId, chatId: chatDetails.chatId });
       }
     }
@@ -39,7 +34,6 @@ function ChatManageMessages({ chatDetails }) {
 
   const handleBlur = () => {
     setIsFocused(false);
-    console.log(isFocused);
   };
 
   const handleKeyPress = (event) => {

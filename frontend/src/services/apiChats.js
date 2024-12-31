@@ -1,52 +1,97 @@
-export async function getChats(userId, token) {
-  const response = await fetch(
-    `http://localhost:5233/api/Chat/MyChats?userId=${userId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+import { setupAxiosInterceptors, axiosInstance } from "../utils/axiosInstance";
 
-  return response.json();
+export async function getChats(userId, queryClient) {
+  setupAxiosInterceptors(queryClient);
+
+  return axiosInstance
+    .get(`Chat/MyChats?userId=${userId}`)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
 }
 
-export async function createIndividualChat(userId, number, customeName, token) {
-  const response = await fetch(
-    `http://localhost:5233/add-friend?SenderUserId=${userId}&FriendNumber=${number}&CustomName=${customeName}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+export async function createIndividualChat(
+  userId,
+  number,
+  customeName,
+  queryClient
+) {
+  setupAxiosInterceptors(queryClient);
 
-  return response.json();
+  return axiosInstance
+    .post(`User/add-friend`, {
+      SenderUserId: `${userId}`,
+      FriendNumber: `${number}`,
+      CustomName: `${customeName}`,
+    })
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
+
+  // const response = await fetch(
+  //   `http://localhost:5233/add-friend?SenderUserId=${userId}&FriendNumber=${number}&CustomName=${customeName}`,
+  //   {
+  //     method: "POST",
+  //     headers: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //   }
+  // );
+
+  // return response.json();
 }
 
-export async function createGroupChat(members, userId, token, name) {
-  const response = await fetch(
-    `http://localhost:5233/api/Chat/CreateGroupChat`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        groupChatUsers: members.map((member) => member.friendId),
-        name: name,
-        groupChatCreator: userId,
-      }),
-    }
-  );
+export async function createGroupChat(members, userId, queryClient, name) {
+  setupAxiosInterceptors(queryClient);
 
-  const responseData = await response.json();
+  return axiosInstance
+    .post(`Chat/CreateGroupChat`, {
+      groupChatUsers: members.map((member) => member.friendId),
+      name: name,
+      groupChatCreator: userId,
+    })
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
 
-  if (!response.ok || responseData.error) {
-    throw new Error(responseData.error);
-  }
+  // const response = await fetch(
+  //   `http://localhost:5233/api/Chat/CreateGroupChat`,
+  //   {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //     body: JSON.stringify({
+  //       groupChatUsers: members.map((member) => member.friendId),
+  //       name: name,
+  //       groupChatCreator: userId,
+  //     }),
+  //   }
+  // );
 
-  return responseData;
+  // if (response.status === 401) {
+  //   console.error("Token is invalid. Please login again.");
+  //   return;
+  // }
+
+  // const responseData = await response.json();
+
+  // if (!response.ok || responseData.error) {
+  //   throw new Error(responseData.error);
+  // }
+
+  // return responseData;
 }

@@ -10,12 +10,14 @@ import {
 } from "../../services/apiUser";
 import { useNavigate } from "react-router-dom";
 import { useAssignUserData } from "../../hooks/assignUserData";
+
 export function useFriends() {
+  const queryClient = useQueryClient();
   const { data: userId } = useQuery({ queryKey: ["userId"] });
-  const { data: token } = useQuery({ queryKey: ["token"] });
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["friends"],
-    queryFn: () => getFriends(userId, token),
+    queryFn: () => getFriends(userId, queryClient),
   });
 
   return { data, isLoading, error };
@@ -23,11 +25,10 @@ export function useFriends() {
 
 export function useCreateUser() {
   const queryClient = useQueryClient();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isLoading: isCreating, mutate: createUser } = useMutation({
     mutationFn: ({ firstName, lastName, password, phoneNumber }) =>
-      createUserApi(firstName, lastName, password, phoneNumber, token),
+      createUserApi(firstName, lastName, password, phoneNumber),
     onSuccess: (data) => {
       toast.success(" user created uccessfully");
       queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -42,14 +43,12 @@ export function useCreateUser() {
 }
 
 export function useLoginUser() {
-  const queryClient = useQueryClient();
   const assignUserData = useAssignUserData();
   const navigate = useNavigate();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isPending: isLogging, mutate: loginUser } = useMutation({
     mutationFn: ({ phoneNumber, password }) =>
-      loginUserApi(phoneNumber, password, token),
+      loginUserApi(phoneNumber, password),
     onSuccess: (data) => {
       if (data.isTwoFactorEnabled) {
         assignUserData(data);
@@ -70,7 +69,6 @@ export function useLoginUser() {
 }
 
 export function useVerifyRefreshToken() {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const assignUserData = useAssignUserData();
 
@@ -81,8 +79,6 @@ export function useVerifyRefreshToken() {
       assignUserData(data);
     },
     onError: (error, variables) => {
-      const { refreshToken } = variables;
-
       navigate("/login");
     },
   });
@@ -92,10 +88,10 @@ export function useVerifyRefreshToken() {
 
 export function useUploadImage() {
   const queryClient = useQueryClient();
+  const { data: userId } = useQuery({ queryKey: ["userId"] });
 
   const { isPending: isLoading, mutate: uploadImage } = useMutation({
-    mutationFn: ({ userId, formData, token }) =>
-      uploadImageApi(userId, formData, token),
+    mutationFn: ({ formData }) => uploadImageApi(userId, formData, queryClient),
 
     onSuccess: (data) => {
       queryClient.setQueryData(["imageUrl"], data.imageUrl);
@@ -108,11 +104,11 @@ export function useUploadImage() {
 
 export function useVerifyTwoFactorAuth() {
   const { data: userId } = useQuery({ queryKey: ["userId"] });
-  const { data: token } = useQuery({ queryKey: ["token"] });
+
   const navigate = useNavigate();
 
   const { isPending: isLoading, mutate: verifyTwoFactorAuth } = useMutation({
-    mutationFn: ({ code }) => verifyTwoFactorAuthApi(userId, code, token),
+    mutationFn: ({ code }) => verifyTwoFactorAuthApi(userId, code),
 
     onSuccess: (data) => {
       toast.success("successfull login, welcome back");
@@ -134,7 +130,7 @@ export function useEnableDisableTwoFactorAuth() {
 
   const { isPending: isLoading, mutate: EnableDisableTwoFactorAuth } =
     useMutation({
-      mutationFn: () => enableDisableTwoFactorAuthApi(userId, token),
+      mutationFn: () => enableDisableTwoFactorAuthApi(userId, queryClient),
 
       onSuccess: (data) => {
         queryClient.setQueryData(["isTwoFactorEnabled"], data.twoFactorEnabled);

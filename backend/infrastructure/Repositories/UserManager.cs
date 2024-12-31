@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Application.ChatsDto;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Org.BouncyCastle.Bcpg;
+using Microsoft.AspNetCore.SignalR;
 
 namespace infrastructure.Repositories;
 public class UserManager : IUserManager
@@ -28,15 +29,17 @@ public class UserManager : IUserManager
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthManager> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly IHubContext<ChatHub> _hubContext;
     private readonly IChatManager _chatManager;
-
-    public UserManager(IImageKitService imageKitService,IConfiguration configuration,ILogger<AuthManager> logger,ApplicationDbContext context,IChatManager chatManager )
+    
+    public UserManager(IImageKitService imageKitService,IHubContext<ChatHub> hubContext,IConfiguration configuration,ILogger<AuthManager> logger,ApplicationDbContext context,IChatManager chatManager )
   {
     this._imageKitService = imageKitService;
     this._configuration = configuration;
     this._logger = logger;
     this._context = context;
     this._chatManager = chatManager;
+    this._hubContext = hubContext;
   }
 
   public async Task<Result<ImageKitResponse>> UploadImage(IFormFile imageUrl,string? userId, string? groupChatId)
@@ -56,12 +59,12 @@ public class UserManager : IUserManager
       
       imageKitResponse  =  await _imageKitService.UploadImage(imageUrl);
 
-       if(!imageKitResponse.Success || imageKitResponse.ImageId==null || imageKitResponse.ImageUrl == null)
-       {
-        result.Success=false;
-        result.Message=$"{imageKitResponse.Message}";
-        return result;
-       } 
+      if(!imageKitResponse.Success || imageKitResponse.ImageId==null || imageKitResponse.ImageUrl == null)
+      {
+      result.Success=false;
+      result.Message=$"{imageKitResponse.Message}";
+      return result;
+      } 
       
       if(userId != null)
       {
@@ -90,10 +93,12 @@ public class UserManager : IUserManager
        result.Message=$"Internal server error";      
        return result;
       }
-        
-       result.SingleData=imageKitResponse;
-       result.Message=$"image uploaded successfully";
-       return result;
+
+    if(!string.IsNullOrWhiteSpace(userId)) await _hubContext.Clients.Group(userId).SendAsync("ProfileImage",imageKitResponse.ImageUrl ); 
+         
+      result.SingleData=imageKitResponse;
+      result.Message=$"image uploaded successfully";
+      return result;
   }
 
   public async Task<Result<bool>> DeleteUserImageKitImage(string userId)
@@ -158,7 +163,7 @@ public class UserManager : IUserManager
       {
         user.Friends.Add(new Friend{UserId=user.Id,FirstName =friend.FirstName,LastName=friend.LastName,Id=friend.Id,CustomName=chatDto.CustomName??"",ImageUrl=friend.ImageUrl});
       }
-      _logger.LogInformation($"{isFriendAlready}");
+      
     
       var chatResult =await _chatManager.GetIndividualChat(chatDto.SenderUserId,friend.Id);
 

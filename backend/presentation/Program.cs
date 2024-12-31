@@ -22,10 +22,12 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 builder.Services.AddScoped<IAuthMangaer, AuthManager>();
+builder.Services.AddScoped<ICacheService,CachService>();
 builder.Services.AddScoped<IMessagesManager,MessagesManager>();
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IChatManager, ChatManager>();
@@ -36,7 +38,13 @@ builder.Services.AddScoped<IImageKitService, ImageKitService>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowCredentials()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
 
@@ -57,7 +65,7 @@ options.Password.RequireUppercase = true;
 options.Password.RequiredLength = 6;
 options.Password.RequiredUniqueChars = 1;
 
-options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
 options.Lockout.MaxFailedAccessAttempts = 5;
 options.Lockout.AllowedForNewUsers = true;
 
@@ -65,8 +73,6 @@ options.User.AllowedUserNameCharacters =
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
 options.User.RequireUniqueEmail = false;
 });
-
-
 
 builder.Services.AddAuthentication(options =>
     {
@@ -79,12 +85,27 @@ builder.Services.AddAuthentication(options =>
         {
             ValidIssuer = builder.Configuration["jwtSettings:Issuer"],
             ValidAudience = builder.Configuration["jwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwtSettings:Key"] ?? string.Empty)),
-
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwtSettings:Key"] ?? string.Empty)),            
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
-            ValidateIssuerSigningKey = true
+            ValidateIssuerSigningKey = true,            
+            ClockSkew = TimeSpan.Zero 
+        };
+        
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                                
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -105,14 +126,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+app.UseCors("AllowSpecificOrigin");
 
 app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub"); 
 
 app.Run();
 

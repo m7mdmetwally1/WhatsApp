@@ -1,35 +1,49 @@
-export async function getFriends(userId, token) {
-  const response = await fetch(
-    `http://localhost:5233/my-friends?userId=${userId}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+import { setupAxiosInterceptors, axiosInstance } from "../utils/axiosInstance";
 
-  if (!response.ok) {
-    throw new Error("Failed get friends data");
-  }
+export async function getFriends(userId, queryClient) {
+  setupAxiosInterceptors(queryClient);
 
-  return response.json();
+  return axiosInstance
+    .get(`User/my-friends?userId=${userId}`)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
+  // const response = await fetch(
+  //   `http://localhost:5233/my-friends?userId=${userId}`,
+  //   {
+  //     method: "POST",
+  //     headers: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //   }
+  // );
+
+  // if (response.status === 401) {
+  //   console.error("Token is invalid. Please login again.");
+  //   return;
+  // }
+
+  // if (!response.ok) {
+  //   throw new Error("Failed get friends data");
+  // }
+
+  // return response.json();
 }
 
 export async function createUserApi(
   firstName,
   lastName,
   password,
-  phoneNumber,
-  token
+  phoneNumber
 ) {
   const response = await fetch(`http://localhost:5233/api/Authentication`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     },
     body: JSON.stringify({
       phoneNumber: phoneNumber,
@@ -38,6 +52,12 @@ export async function createUserApi(
       password: password,
     }),
   });
+
+  if (response.status === 401) {
+    console.error("Token is invalid. Please login again.");
+    return;
+  }
+
   const resonseData = await response.json();
 
   if (!response.ok) {
@@ -47,14 +67,13 @@ export async function createUserApi(
   return resonseData;
 }
 
-export async function loginUserApi(phoneNumber, password, token) {
+export async function loginUserApi(phoneNumber, password) {
   const response = await fetch(
     `http://localhost:5233/api/Authentication/Login`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         phoneNumber: phoneNumber,
@@ -62,26 +81,29 @@ export async function loginUserApi(phoneNumber, password, token) {
       }),
     }
   );
-
+  if (response.status === 401) {
+    console.error("Token is invalid. Please login again.");
+    return;
+  }
   const responseData = await response.json();
-
   if (!response.ok || responseData.error) {
     throw new Error(responseData.error);
   }
-
   return responseData;
 }
 
-export async function verifyRefreshTokenApi(refreshToken, token) {
+export async function verifyRefreshTokenApi(refreshToken) {
   const response = await fetch(
     `http://localhost:5233/api/Authentication/VerifyRefreshToken?refreshToken=${refreshToken}`,
     {
       method: "POST",
-      header: {
-        Authorization: `Bearer ${token}`,
-      },
     }
   );
+
+  if (response.status === 401) {
+    console.error("Token is invalid. Please login again.");
+    return;
+  }
 
   if (!response.ok) {
     throw new Error("Failed get verify refresh token");
@@ -90,35 +112,54 @@ export async function verifyRefreshTokenApi(refreshToken, token) {
   return response.json();
 }
 
-export async function uploadImageApi(userId, formData, token) {
-  const response = await fetch(
-    `http://localhost:5233/Upload-Image?UserId=${userId}`,
-    {
-      method: "POST",
-      header: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    }
-  );
+export async function uploadImageApi(userId, formData, queryClient) {
+  setupAxiosInterceptors(queryClient);
 
-  if (!response.ok) {
-    throw new Error("Failed get verify refresh token");
-  }
+  return axiosInstance
+    .post(`User/Upload-Image`, formData)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
 
-  return response.json();
+  // const response = await fetch(
+  //   `http://localhost:5233/Upload-Image?UserId=${userId}`,
+  //   {
+  //     method: "POST",
+  //     header: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //     body: formData,
+  //   }
+  // );
+
+  // if (response.status === 401) {
+  //   console.error("Token is invalid. Please login again.");
+  //   return;
+  // }
+
+  // if (!response.ok) {
+  //   throw new Error("Failed get verify refresh token");
+  // }
+
+  // return response.json();
 }
 
-export async function verifyTwoFactorAuthApi(userId, code, token) {
+export async function verifyTwoFactorAuthApi(userId, code) {
   const response = await fetch(
     `http://localhost:5233/api/Authentication/VerifyPhoneNumber?userId=${userId}&&code=${code}`,
     {
       method: "POST",
-      header: {
-        Authorization: `Bearer ${token}`,
-      },
     }
   );
+
+  if (response.status === 401) {
+    console.error("Token is invalid. Please login again.");
+    return;
+  }
 
   const responseData = await response.json();
 
@@ -129,20 +170,37 @@ export async function verifyTwoFactorAuthApi(userId, code, token) {
   return responseData;
 }
 
-export async function enableDisableTwoFactorAuthApi(userId, token) {
-  const response = await fetch(
-    `http://localhost:5233/api/Authentication/EnableDisableTwoFactor?userId=${userId}`,
-    {
-      method: "POST",
-      header: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+export async function enableDisableTwoFactorAuthApi(userId, queryClient) {
+  setupAxiosInterceptors(queryClient);
 
-  if (!response.ok) {
-    throw new Error("Failed get verify refresh token");
-  }
+  return axiosInstance
+    .post(`Authentication/EnableDisableTwoFactor?userId=${userId}`)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      throw error;
+    });
 
-  return response.json();
+  // const response = await fetch(
+  //   `http://localhost:5233/api/Authentication/EnableDisableTwoFactor?userId=${userId}`,
+  //   {
+  //     method: "POST",
+  //     header: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //   }
+  // );
+
+  // if (response.status === 401) {
+  //   console.error("Token is invalid. Please login again.");
+  //   return;
+  // }
+
+  // if (!response.ok) {
+  //   throw new Error("Failed get verify refresh token");
+  // }
+
+  // return response.json();
 }

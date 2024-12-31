@@ -177,3 +177,6 @@ E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.pdb
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\presentation.genruntimeconfig.cache
 E:\projects\whatsapp\backend\presentation\obj\Debug\net8.0\ref\presentation.dll
 E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\SixLabors.ImageSharp.dll
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\System.Net.WebSockets.WebSocketProtocol.dll
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\Pipelines.Sockets.Unofficial.dll
+E:\projects\whatsapp\backend\presentation\bin\Debug\net8.0\StackExchange.Redis.dll

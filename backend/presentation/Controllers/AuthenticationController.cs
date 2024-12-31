@@ -52,6 +52,7 @@ public class AuthenticationController : ControllerBase
 
     [HttpPost]
     [Route("Login")]
+    
     public async Task<ActionResult> Login(LoginDto login)
     {
         if (login == null)
@@ -107,7 +108,7 @@ public class AuthenticationController : ControllerBase
 
         return Ok(result);
     }
-
+    
     [HttpPost]
     [Route("ResendSms")]
     public async Task<ActionResult> ResendSms(string phoneNumber)

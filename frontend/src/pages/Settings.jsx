@@ -6,14 +6,18 @@ import {
   useEnableDisableTwoFactorAuth,
 } from "../features/user/useUser";
 import { ClipLoader } from "react-spinners";
+import useSignalRStore from "../store/useSignalRStore";
+import { useEffect, useState } from "react";
 
 function Settings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { connection } = useSignalRStore();
 
-  const { data: imageUrl } = useQuery({ queryKey: ["imageUrl"] });
-  const { data: token } = useQuery({ queryKey: ["token"] });
+  let { data: imageUrl } = useQuery({ queryKey: ["imageUrl"] });
+  const [image, setImage] = useState(imageUrl);
   const { data: userId } = useQuery({ queryKey: ["userId"] });
+
   const { EnableDisableTwoFactorAuth } = useEnableDisableTwoFactorAuth();
 
   const { data: isTwoFactorEnabled } = useQuery({
@@ -21,6 +25,20 @@ function Settings() {
   });
 
   const { uploadImage, isLoading } = useUploadImage();
+
+  useEffect(() => {
+    if (connection) {
+      connection.off("ProfileImage");
+      connection.on("ProfileImage", (imageUrl) => {
+        console.log("it work");
+        setImage(imageUrl);
+      });
+    }
+
+    return () => {
+      connection?.off("ProfileImage");
+    };
+  }, [connection]);
 
   function changeTwoFactorAuth() {
     EnableDisableTwoFactorAuth();
@@ -38,10 +56,11 @@ function Settings() {
     const file = event.target.files[0];
     const formData = new FormData();
     formData.append("ImageUrl", file);
+    formData.append("UserId", userId);
 
     if (!file) return;
 
-    uploadImage({ userId, formData, token });
+    uploadImage({ formData });
     event.target.value = "";
   }
 
@@ -50,7 +69,7 @@ function Settings() {
       <div className="flex flex-row w-full h-full dark:text-white">
         <div className="relative  mr-10 ml-10 flex flex-col">
           <img
-            src={imageUrl || "/default-image.webp"}
+            src={image || "/default-image.webp"}
             alt=""
             className="w-[150px] h-[150px] rounded-full border border-gray-300 shadow-md"
           />

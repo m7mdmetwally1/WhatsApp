@@ -9,18 +9,21 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.AspNetCore.SignalR;
 
 namespace infrastructure.Repositories;
 
 public class MessagesManager : IMessagesManager
 {
     private readonly ApplicationDbContext _context;
+    private readonly IHubContext<ChatHub> _hubContext;
     private readonly IMapper _mapper;
     private readonly ILogger _logger;
 
-    public MessagesManager(ApplicationDbContext context, IMapper mapper, ILogger<MessagesManager> _logger)
+    public MessagesManager(ApplicationDbContext context,IHubContext<ChatHub> hubContext,IMapper mapper, ILogger<MessagesManager> _logger)
     {
         this._context = context;
+        this._hubContext = hubContext;
         this._mapper = mapper;
         this._logger = _logger;
     }
@@ -65,8 +68,10 @@ public class MessagesManager : IMessagesManager
         {
             _context.IndividualMessages.Add(messageToBeInserted);            
 
-             await _context.SaveChangesAsync();          
+            await _context.SaveChangesAsync();  
 
+            await _hubContext.Clients.Group(message.ChatId).SendAsync("ReceiveMessage", message.ChatId, message.UserId, message.Content);   
+                   
         }catch(Exception ex)
         {
             result.Success=false;           
@@ -129,6 +134,8 @@ public class MessagesManager : IMessagesManager
             _logger.LogInformation($"{messageToBeInserted.SeenBy.Count()}");             
 
             await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.Group(message.ChatId).SendAsync("ReceiveMessage", message.ChatId, message.UserId, message.Content);
 
         }catch(Exception ex)
         {

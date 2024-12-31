@@ -132,9 +132,10 @@ public class AuthManager : IAuthMangaer
       var imageUrl = await _context.User.Where(u=>u.Id==user.Id).Select(u=>u.ImageUrl).FirstOrDefaultAsync();
 
       var isEmailConfirmed =  await _userManager.IsEmailConfirmedAsync(user);
+      
 
-      var token =  GenerateJWTToken();
-      var RefreshToken = GenerateRefreshToken(user.PhoneNumber);
+      var token =  GenerateJWTToken(user.Id);
+      var RefreshToken = GenerateRefreshToken(user.PhoneNumber,user.Id);
       
       // if(isTwoFactorEnabled)
       // {
@@ -161,23 +162,28 @@ public class AuthManager : IAuthMangaer
         ErrorMessage= "password not correct"
       };
   } 
-  private string GenerateJWTToken()
+  
+  private string GenerateJWTToken(string userId)
   {
     var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+    
+    var claims = new[]
+    {        
+        new Claim(ClaimTypes.NameIdentifier,userId)       
+    };
 
     var Sectoken = new JwtSecurityToken(_configuration["jwtSettings:Issuer"],
                                         _configuration["jwtSettings:Audience"],
-                                        null,
-                                        expires: DateTime.Now.AddMinutes(120),
+                                        claims: claims,
+                                        expires: DateTime.UtcNow.AddMinutes(1),
                                         signingCredentials: credentials);
                                         var token =  new JwtSecurityTokenHandler().WriteToken(Sectoken);
 
     return token;
 
   }
-
   public async Task<bool> VerifyPhoneNumberCode(string userId, string code)
   {
 
@@ -304,7 +310,7 @@ public class AuthManager : IAuthMangaer
 
   }
 
-  public string GenerateRefreshToken(string phoneNumber)
+  public string GenerateRefreshToken(string phoneNumber,string userId)
   {
       var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
       var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -313,6 +319,7 @@ public class AuthManager : IAuthMangaer
       var claims = new[]
       {         
           new Claim("phoneNumber", phoneNumber),
+          new Claim(ClaimTypes.NameIdentifier,userId),
           new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) 
       };
 
@@ -329,7 +336,7 @@ public class AuthManager : IAuthMangaer
   
   public async Task<AuthResponseDto> VerifyRefreshToken(string refreshToken)
   {
-    _logger.LogInformation($"{refreshToken}");
+    
     var jwtKey = _configuration["jwtSettings:Key"] ?? "my-ultra-secure-and-ultra-long-secret";
     var tokenValidationParameters = new TokenValidationParameters
     {
@@ -359,12 +366,13 @@ public class AuthManager : IAuthMangaer
       {
           return new AuthResponseDto{ErrorMessage="Invalid refresh token , no phone number"};
       }
-
-      var newToken = GenerateJWTToken();
-      var newRefreshToken = GenerateRefreshToken(phoneNumber);
+    
+     
       var userApi = await _userManager.Users
         .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);  
-        var user = await _context.User.Where(u=>u.Id == userApi.Id).FirstOrDefaultAsync();
+      var user = await _context.User.Where(u=>u.Id == userApi.Id).FirstOrDefaultAsync();
+      var newToken = GenerateJWTToken(userApi.Id);
+       var newRefreshToken = GenerateRefreshToken(phoneNumber,user.Id);
 
       return new AuthResponseDto{Token=newToken,RefreshToken=newRefreshToken,UserId=userApi.Id,ImageUrl=user.ImageUrl,IsTwoFactorEnabled=userApi.TwoFactorEnabled};
     }

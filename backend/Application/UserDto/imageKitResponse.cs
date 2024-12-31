@@ -7,3 +7,4 @@ public class ImageKitResponse
     public string? Message {get;set;} 
     public bool Success { get; set; }   
 }
+

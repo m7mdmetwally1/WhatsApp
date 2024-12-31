@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace presentation.Controllers.ChatControllers;
 
+[ApiController]
+[Route("api/[controller]")]
 public class UserController :ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -27,9 +29,8 @@ public class UserController :ControllerBase
         this._userManager = userManager;
     }
 
-    [HttpPost]
-    [Route("add-friend")]
-    //  [Authorize]
+    [HttpPost("add-friend")]    
+    [Authorize]
     public async Task<ActionResult> AddFriend(CreateIndividualChatDto chatDto)
     {   
 
@@ -44,9 +45,8 @@ public class UserController :ControllerBase
                 
     }
 
-    [HttpPost]
-    [Route("Delete-image")]
-     [Authorize]
+    [HttpPost("Delete-image")]    
+    [Authorize]
     public async Task<ActionResult> DeleteImage(string? userId,string? groupChatId)
     {
         if(string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(groupChatId))
@@ -84,10 +84,9 @@ public class UserController :ControllerBase
 
     }
 
-    [HttpPost]
-    [Route("Upload-Image")]
-    //  [Authorize]
-    public async Task<ActionResult> UploadImage(UploadImageDto uploadImageDto)
+    [HttpPost("Upload-Image")]   
+    [Authorize]
+    public async Task<ActionResult> UploadImage( UploadImageDto uploadImageDto)
     {
         _logger.LogInformation($"{uploadImageDto.ImageUrl} test");
         _logger.LogInformation($"{uploadImageDto.UserId} test");
@@ -102,7 +101,7 @@ public class UserController :ControllerBase
       
         if(uploadImageDto.ImageUrl == null){
         return BadRequest("imageUrl can not be null");
-        }        ;
+        };
      
         var result = await  _userManager.UploadImage(uploadImageDto.ImageUrl,uploadImageDto.UserId,uploadImageDto.GroupChatId);
 
@@ -113,10 +112,9 @@ public class UserController :ControllerBase
                    
         return Ok(new {Success=true,Message=result.Message,ImageUrl=result.SingleData.ImageUrl??""});
     } 
-
-    [HttpPost]
-    [Route("my-friends")]
-     [Authorize]
+    
+    [HttpGet("my-friends")]
+    [Authorize]
     public async Task<ActionResult> MyFriends(string userId)
     {
         if(userId== null) return BadRequest("no userId sent");

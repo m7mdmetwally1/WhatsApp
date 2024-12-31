@@ -1,5 +1,10 @@
 import ChatsTitleContent from "../ui/ChatsTitleContent";
 import { Outlet } from "react-router-dom";
+import { useVerifyRefreshToken } from "../features/user/useUser";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import isTokenExpired from "../utils/expiredTokensCheck";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 
 function Chats() {
   return (

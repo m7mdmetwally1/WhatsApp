@@ -9,10 +9,11 @@ import {
 } from "../../services/apiMessages";
 
 export function IndividualChatMessages(userId, chatId) {
-  const { data: token } = useQuery({ queryKey: ["token"] });
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["Messages", userId, chatId],
-    queryFn: () => getMessages(userId, chatId, token),
+    queryFn: () => getMessages(userId, chatId, queryClient),
     enabled: !!userId && !!chatId,
   });
 
@@ -20,10 +21,11 @@ export function IndividualChatMessages(userId, chatId) {
 }
 
 export function GroupChatMessages(userId, chatId) {
-  const { data: token } = useQuery({ queryKey: ["token"] });
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["Messages", chatId],
-    queryFn: () => getGroupMessages(userId, chatId, token),
+    queryFn: () => getGroupMessages(userId, chatId, queryClient),
     enabled: !!userId && !!chatId,
   });
 
@@ -32,11 +34,10 @@ export function GroupChatMessages(userId, chatId) {
 
 export function useOpenIndividualChat(userId, chatId) {
   const queryClient = useQueryClient();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isLoading: isOpening, mutate: openChat } = useMutation({
     mutationFn: ({ userId, chatId }) =>
-      openIndividualChat(userId, chatId, token),
+      openIndividualChat(userId, chatId, queryClient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["Messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -51,10 +52,10 @@ export function useOpenIndividualChat(userId, chatId) {
 
 export function useOpenGroupChat() {
   const queryClient = useQueryClient();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isLoading: isOpening, mutate: openChatGroup } = useMutation({
-    mutationFn: ({ userId, chatId }) => openGroupChat(userId, chatId, token),
+    mutationFn: ({ userId, chatId }) =>
+      openGroupChat(userId, chatId, queryClient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["Messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -69,13 +70,11 @@ export function useOpenGroupChat() {
 
 export function useInsertIndividualChatMessage() {
   const queryClient = useQueryClient();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isLoading: inserting, mutate: insertMessage } = useMutation({
     mutationFn: ({ userId, chatId, content }) =>
-      insertIndividualChatMessage(userId, chatId, content, token),
+      insertIndividualChatMessage(userId, chatId, content, queryClient),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["Messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error) => {
@@ -90,13 +89,11 @@ export function useInsertIndividualChatMessage() {
 
 export function useInsertGroupChatMessage() {
   const queryClient = useQueryClient();
-  const { data: token } = useQuery({ queryKey: ["token"] });
 
   const { isLoading: inserting, mutate: insertGroupMessage } = useMutation({
     mutationFn: ({ userId, chatId, content }) =>
-      insertGroupChatMessage(userId, chatId, content, token),
+      insertGroupChatMessage(userId, chatId, content, queryClient),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["Messages"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error) => {

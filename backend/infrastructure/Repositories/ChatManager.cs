@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.ChatsDto;
 using Application.Common;
 using Application.Interfaces;
@@ -10,26 +11,32 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Org.BouncyCastle.Asn1.Icao;
 using Org.BouncyCastle.Crypto.Macs;
+// using Microsoft.AspNetCore.SignalR;
+//,IHubContext<ChatHub> hubContext
 
 namespace infrastructure.Repositories;
 
 public class ChatManager : IChatManager
 {
     private readonly ApplicationDbContext _context;
+    // private readonly IHubContext<ChatHub> _hubContext;
+    private readonly ICacheService _cacheService;
     private readonly IMapper _mapper;
     private readonly IImageKitService _imageKitService;
     private readonly IAuthMangaer _authMangaer;
     private readonly ILogger<ChatManager> _logger;
-  
-
-    public ChatManager(ApplicationDbContext context,IMapper mapper,IImageKitService imageKitService,IAuthMangaer authMangaer,ILogger<ChatManager> logger )
+   
+  public ChatManager(ApplicationDbContext context,ICacheService cacheService,IMapper mapper,IImageKitService imageKitService,IAuthMangaer authMangaer,ILogger<ChatManager> logger )
   {
       this._context = context;
+      // this._hubContext = hubContext;
+      this._cacheService = cacheService;
       this._mapper = mapper;
       this._imageKitService = imageKitService;
       this._authMangaer = authMangaer;
       this._logger = logger;
   }
+
   public async Task<Result<string>> CreateChat(CreateIndividualChatDto chatDto)
   {
       var result = new Result<string>();
@@ -39,12 +46,14 @@ public class ChatManager : IChatManager
       newChat.Id = Guid.NewGuid().ToString();
       newChat.IndividualChatUser.Add(new IndividualChatUser{UserId = chatDto.SenderUserId,IndividualChatId = newChat.Id,CustomName = chatDto.CustomName ?? ""});
       newChat.IndividualChatUser.Add(new IndividualChatUser{UserId = chatDto.SecondUserId,IndividualChatId = newChat.Id});
-      
+      // var connectionId = ChatHub.GetConnectionIdForUser(chatDto.SecondUserId);
+
       try
       {
         _context.IndividualChat.Add(newChat);  
-        await _context.SaveChangesAsync();
-      }
+        await _context.SaveChangesAsync(); 
+        // await _hubContext.Groups.AddToGroupAsync(connectionId, newChat.Id);        
+      }      
       catch(Exception ex)
       {
         result.Success=false;
@@ -116,6 +125,7 @@ public class ChatManager : IChatManager
 
   public async Task<Result<IndividualChat>> GetIndividualChat(string senderUserId,string secondUserId)
   {
+  
     var result = new Result<IndividualChat>();
 
     IndividualChat? Chat;
@@ -254,23 +264,44 @@ public class ChatManager : IChatManager
      
     result.Message="image deleted successfully";
     return result;
-  }
-  
+  }  
+
   public async Task<Result<GetChat>> GetUserIndividualChats(string userId)
   {
-      var result = new Result<GetChat>();
+    var result = new Result<GetChat>();
 
-      var user =await _context.User.Where(u=> u.Id == userId).FirstOrDefaultAsync();
+    var user =await _context.User.Where(u=> u.Id == userId).FirstOrDefaultAsync();
       if(user == null) {
         result.Success=false;
         result.Message=$"there is no user with this id";      
         return result;
-      } 
+      }
       
       List<GetChat> chats;
+
+      List<IndividualChat> queryResult;
+
+      var cacheKey = $"userIndividualChats:{userId}";
+      var cacheData = _cacheService.GetData<List<IndividualChat>>(cacheKey);
+
+      if (cacheData != null)
+      {
+          queryResult = cacheData;
+      }else{
+         queryResult = queryResult = await _context.IndividualChat
+                                                    .Where(c => c.IndividualChatUser.Any(u => u.UserId == userId))  
+                                                    .Include(c => c.Messages)                                      
+                                                    .Include(c => c.IndividualChatUser)
+                                                    .Include(c=>c.Users)                           
+                                                    .ToListAsync();
+         cacheData = queryResult;
+         var expirationTime = DateTimeOffset.Now.AddMinutes(5.0);
+         _cacheService.SetData<List<IndividualChat>>(cacheKey, cacheData, expirationTime);
+      }
+            
       try
       {
-       chats =await _context.IndividualChat.Include(c=>c.Messages).Where(c=> c.IndividualChatUser.Any(u => u.UserId == userId))
+       chats =queryResult
       .Select(c => new GetChat {
       CustomName=c.IndividualChatUser.Where(ic=>ic.UserId == userId).Select(ic=>ic.CustomName).FirstOrDefault(),
       Number=c.Users.Where(c=>c.Id != userId).Select(u => u.Number).FirstOrDefault(),
@@ -282,7 +313,7 @@ public class ChatManager : IChatManager
       ChatType=true
       }
       )
-      .ToListAsync();
+      .ToList();
 
       }catch(Exception ex)
       {
@@ -291,7 +322,7 @@ public class ChatManager : IChatManager
         
         return result;
       }            
-      
+            
       result.Data=chats;
       result.Message="getting chats success";
       return result;       
@@ -302,18 +333,33 @@ public class ChatManager : IChatManager
     var result = new Result<GetChat>();
 
     var user =await _context.User.Where(u=> u.Id == userId).FirstOrDefaultAsync();
-      if(user == null) {
-        result.Success=false;
-        result.Message=$"there is no user with this id";      
-        return result;
-      } 
+    if(user == null) {
+      result.Success=false;
+      result.Message=$"there is no user with this id";      
+      return result;
+    }       
+
+    List<GroupChat> queryResult;
+    var cacheKey = $"userGroupChats:{userId}";
+
+    var cacheData = _cacheService.GetData<List<GroupChat>>(cacheKey);
+
+    if (cacheData != null)
+    {
+        queryResult = cacheData;
+    }else{
+        queryResult = await _context.Chat.Include(c=>c.Members).ToListAsync();
+        cacheData = queryResult;
+        var expirationTime = DateTimeOffset.Now.AddMinutes(5.0);
+        _cacheService.SetData<List<GroupChat>>(cacheKey, cacheData, expirationTime);
+    }
 
     List<GetChat> chats;
 
     try 
     {
       var friends =await  _context.User.Where(u=>u.Id == userId).SelectMany(u=>u.Friends.Select(f=>f.Id)).ToListAsync();
-      chats =await _context.Chat.Include(c=>c.Members).Where(c=> c.Members.Any(m=>m.UserId == userId)).Select(c=>new GetChat {
+      chats =queryResult.Where(c=> c.Members.Any(m=>m.UserId == userId)).Select(c=>new GetChat {
       CustomName =c.Name,
       ImageUrl=c.ImageUrl,      
       LastMessage= c.Messages.OrderByDescending(m=>m.SentAt).Select(m=> m.Content).FirstOrDefault(),      
@@ -321,7 +367,7 @@ public class ChatManager : IChatManager
       NumberOfUnSeenMessages=c.Messages.Count(m => m.SeenBy.All(s => s.SeenWith != userId)),    
       ChatId=c.Id,
       ChatType=false   
-        }).ToListAsync();
+        }).ToList();
       
     }catch(Exception ex)
     {
